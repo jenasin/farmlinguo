@@ -25,6 +25,8 @@
         .progress-bar { height: 100%; background: #16a34a; transition: width 0.3s; }
         .icon { font-size: 48px; }
         .module-btn { background: linear-gradient(135deg, #f59e0b, #d97706); color: white; display: flex; align-items: center; gap: 16px; }
+        .module-btn.locked { background: #9ca3af; opacity: 0.6; cursor: not-allowed; }
+        .module-btn.completed { background: linear-gradient(135deg, #16a34a, #15803d); }
         .stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin: 16px 0; }
         .stat-box { background: #f0f9ff; padding: 16px; border-radius: 12px; text-align: center; }
         .stat-num { font-size: 24px; font-weight: bold; color: #0369a1; }
@@ -73,28 +75,9 @@
                 <div class="progress-bar" id="timeProgress" style="width:0%"></div>
             </div>
         </div>
-        <div style="flex:1; padding:16px;">
-            <h2 style="text-align:center; margin-bottom:16px; color:#333;">Chagua Moduli</h2>
-            <button class="btn module-btn" style="background:linear-gradient(135deg,#f59e0b,#d97706);" onclick="startModule('beans')">
-                <span style="font-size:36px;">🫘</span>
-                <div><div style="font-size:20px;">Maharagwe</div><div style="font-size:14px;opacity:0.8;">Bofya kuanza</div></div>
-            </button>
-            <button class="btn module-btn" style="background:linear-gradient(135deg,#eab308,#ca8a04);" onclick="startModule('cashew')">
-                <span style="font-size:36px;">🥜</span>
-                <div><div style="font-size:20px;">Korosho</div><div style="font-size:14px;opacity:0.8;">Bofya kuanza</div></div>
-            </button>
-            <button class="btn module-btn" style="background:linear-gradient(135deg,#f97316,#ea580c);" onclick="startModule('drought')">
-                <span style="font-size:36px;">🏜️</span>
-                <div><div style="font-size:20px;">Ukame</div><div style="font-size:14px;opacity:0.8;">Bofya kuanza</div></div>
-            </button>
-            <button class="btn module-btn" style="background:linear-gradient(135deg,#facc15,#eab308);" onclick="startModule('maize')">
-                <span style="font-size:36px;">🌽</span>
-                <div><div style="font-size:20px;">Mahindi</div><div style="font-size:14px;opacity:0.8;">Bofya kuanza</div></div>
-            </button>
-            <button class="btn module-btn" style="background:linear-gradient(135deg,#ef4444,#dc2626);" onclick="startModule('tomato')">
-                <span style="font-size:36px;">🍅</span>
-                <div><div style="font-size:20px;">Nyanya</div><div style="font-size:14px;opacity:0.8;">Bofya kuanza</div></div>
-            </button>
+        <div style="flex:1; padding:16px; overflow-y:auto;">
+            <h2 style="text-align:center; margin-bottom:16px; color:#333;">Chagua Kiwango</h2>
+            <div id="modulesContainer"></div>
         </div>
         <div style="padding:16px;">
             <button class="btn" style="background:#fee2e2; color:#dc2626;" onclick="endTest()">🛑 Maliza Mtihani</button>
@@ -105,7 +88,7 @@
     <div id="quizScreen" class="screen">
         <div class="header" id="quizHeader">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-                <button onclick="showScreen('modulesScreen')" style="background:none; border:none; color:white; font-size:24px; cursor:pointer;">✕</button>
+                <button onclick="renderModules(); showScreen('modulesScreen')" style="background:none; border:none; color:white; font-size:24px; cursor:pointer;">✕</button>
                 <div style="display:flex; align-items:center; gap:8px;">
                     <span id="moduleIcon">🫘</span>
                     <span style="font-weight:bold;">L<span id="levelNum">1</span></span>
@@ -204,6 +187,27 @@
         let totalCorrect = 0;
         const SESSION_DURATION = 5 * 60;
 
+        // Progress tracking - which levels are unlocked
+        let unlockedIndex = 0; // Index into LEVELS array
+
+        const LEVELS = [
+            { module: 'beans', level: 1, name: 'Maharagwe', icon: '🫘', color: '#f59e0b' },
+            { module: 'beans', level: 2, name: 'Maharagwe', icon: '🫘', color: '#f59e0b' },
+            { module: 'beans', level: 3, name: 'Maharagwe', icon: '🫘', color: '#f59e0b' },
+            { module: 'cashew', level: 1, name: 'Korosho', icon: '🥜', color: '#eab308' },
+            { module: 'cashew', level: 2, name: 'Korosho', icon: '🥜', color: '#eab308' },
+            { module: 'cashew', level: 3, name: 'Korosho', icon: '🥜', color: '#eab308' },
+            { module: 'drought', level: 1, name: 'Ukame', icon: '🏜️', color: '#f97316' },
+            { module: 'drought', level: 2, name: 'Ukame', icon: '🏜️', color: '#f97316' },
+            { module: 'drought', level: 3, name: 'Ukame', icon: '🏜️', color: '#f97316' },
+            { module: 'maize', level: 1, name: 'Mahindi', icon: '🌽', color: '#facc15' },
+            { module: 'maize', level: 2, name: 'Mahindi', icon: '🌽', color: '#facc15' },
+            { module: 'maize', level: 3, name: 'Mahindi', icon: '🌽', color: '#facc15' },
+            { module: 'tomato', level: 1, name: 'Nyanya', icon: '🍅', color: '#ef4444' },
+            { module: 'tomato', level: 2, name: 'Nyanya', icon: '🍅', color: '#ef4444' },
+            { module: 'tomato', level: 3, name: 'Nyanya', icon: '🍅', color: '#ef4444' }
+        ];
+
         // ========== HELPERS ==========
         function showScreen(id) {
             document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
@@ -227,6 +231,63 @@
 
         function updateParticipantCount() {
             document.getElementById('participantCount').textContent = getParticipants().length;
+        }
+
+        // ========== RENDER MODULES ==========
+        function renderModules() {
+            const container = document.getElementById('modulesContainer');
+            container.innerHTML = '';
+
+            LEVELS.forEach((lvl, idx) => {
+                const isCompleted = idx < unlockedIndex;
+                const isUnlocked = idx === unlockedIndex;
+                const isLocked = idx > unlockedIndex;
+
+                const btn = document.createElement('button');
+                btn.className = 'btn module-btn';
+
+                if (isCompleted) {
+                    btn.classList.add('completed');
+                    btn.style.background = 'linear-gradient(135deg, #16a34a, #15803d)';
+                } else if (isUnlocked) {
+                    btn.style.background = `linear-gradient(135deg, ${lvl.color}, ${lvl.color}dd)`;
+                } else {
+                    btn.classList.add('locked');
+                }
+
+                const statusText = isCompleted ? '✓ Imekamilika' : isUnlocked ? '▶ Bofya kuanza' : '🔒 Imefungwa';
+
+                btn.innerHTML = `
+                    <span style="font-size:36px;">${lvl.icon}</span>
+                    <div style="flex:1;">
+                        <div style="font-size:20px;">${lvl.name} - L${lvl.level}</div>
+                        <div style="font-size:14px;opacity:0.8;">${statusText}</div>
+                    </div>
+                `;
+
+                if (isUnlocked) {
+                    btn.onclick = () => startLevel(idx);
+                } else if (isCompleted) {
+                    btn.onclick = () => startLevel(idx); // Allow replay
+                }
+
+                container.appendChild(btn);
+            });
+
+            // If all completed, show congratulations
+            if (unlockedIndex >= LEVELS.length) {
+                const msg = document.createElement('div');
+                msg.style.cssText = 'text-align:center; padding:20px; color:#16a34a; font-size:20px; font-weight:bold;';
+                msg.innerHTML = '🎉 Hongera! Umekamilisha viwango vyote!';
+                container.appendChild(msg);
+            }
+        }
+
+        function startLevel(idx) {
+            const lvl = LEVELS[idx];
+            currentModule = lvl.module;
+            currentLevel = lvl.level;
+            loadLevel();
         }
 
         // ========== TIMER ==========
@@ -258,6 +319,7 @@
             sessionStart = Date.now();
             answers = [];
             totalCorrect = 0;
+            unlockedIndex = 0; // Reset progress
 
             document.getElementById('displayName').textContent = userName;
             document.getElementById('answeredCount').textContent = '0';
@@ -265,16 +327,11 @@
             timerInterval = setInterval(updateTimer, 1000);
             updateTimer();
 
+            renderModules(); // Render level buttons
             showScreen('modulesScreen');
         }
 
         // ========== MODULE ==========
-        function startModule(moduleId) {
-            currentModule = moduleId;
-            currentLevel = 1;
-            loadLevel();
-        }
-
         function loadLevel() {
             const moduleData = {
                 'beans': window.beansQuestions,
@@ -291,6 +348,7 @@
             questions = data[levelKey] || [];
 
             if (questions.length === 0) {
+                renderModules();
                 showScreen('modulesScreen');
                 return;
             }
@@ -381,9 +439,16 @@
         function nextQuestion() {
             questionIndex++;
             if (questionIndex >= questions.length) {
-                // Level complete, try next level
-                currentLevel++;
-                loadLevel();
+                // Level complete - unlock next level
+                // Find current level index and unlock next
+                const currentIdx = LEVELS.findIndex(l => l.module === currentModule && l.level === currentLevel);
+                if (currentIdx >= unlockedIndex) {
+                    unlockedIndex = currentIdx + 1; // Unlock next level
+                }
+
+                // Go back to modules screen to show progress
+                renderModules();
+                showScreen('modulesScreen');
             } else {
                 showQuestion();
             }
