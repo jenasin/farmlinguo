@@ -7,30 +7,119 @@
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#16a34a">
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, sans-serif; }
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Nunito', 'Segoe UI', Tahoma, sans-serif; }
         body { background: linear-gradient(to bottom, #f0fdf4, #dcfce7); min-height: 100vh; }
         .screen { display: none; min-height: 100vh; }
         .screen.active { display: flex; flex-direction: column; }
-        .btn { padding: 18px 24px; border: none; border-radius: 16px; font-size: 18px; font-weight: bold; cursor: pointer; width: 100%; margin: 8px 0; }
-        .btn-green { background: #16a34a; color: white; box-shadow: 0 4px 0 #166534; }
-        .btn-green:active { transform: translateY(2px); box-shadow: 0 2px 0 #166534; }
-        .btn-answer { background: white; border: 2px solid #e5e7eb; text-align: left; display: flex; align-items: center; gap: 12px; }
-        .btn-answer.correct { background: #dcfce7; border-color: #16a34a; }
-        .btn-answer.wrong { background: #fee2e2; border-color: #dc2626; }
-        .header { background: #16a34a; color: white; padding: 16px; }
-        .card { background: white; border-radius: 20px; padding: 24px; margin: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
-        input[type="text"] { width: 100%; padding: 16px; font-size: 18px; border: 2px solid #e5e7eb; border-radius: 12px; }
-        .timer { font-size: 32px; font-weight: bold; font-family: monospace; }
-        .progress { height: 8px; background: #e5e7eb; border-radius: 4px; overflow: hidden; }
-        .progress-bar { height: 100%; background: #16a34a; transition: width 0.3s; }
+
+        /* 3D Duolingo-style buttons */
+        .btn {
+            padding: 16px 24px;
+            border: none;
+            border-radius: 16px;
+            font-size: 17px;
+            font-weight: 700;
+            cursor: pointer;
+            width: 100%;
+            margin: 6px 0;
+            transition: all 0.1s ease;
+            position: relative;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .btn-green {
+            background: #58cc02;
+            color: white;
+            border-bottom: 4px solid #58a700;
+        }
+        .btn-green:hover { background: #61d802; }
+        .btn-green:active {
+            transform: translateY(4px);
+            border-bottom-width: 0;
+        }
+
+        /* Answer buttons - Duolingo style */
+        .btn-answer {
+            background: white;
+            border: 2px solid #e5e7eb;
+            border-bottom: 4px solid #d1d5db;
+            text-align: left;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            text-transform: none;
+        }
+        .btn-answer:hover { background: #f9fafb; border-color: #cbd5e1; }
+        .btn-answer:active {
+            transform: translateY(2px);
+            border-bottom-width: 2px;
+        }
+        .btn-answer.correct {
+            background: #d7ffb8;
+            border-color: #58cc02;
+            border-bottom-color: #58a700;
+        }
+        .btn-answer.wrong {
+            background: #ffdfe0;
+            border-color: #ff4b4b;
+            border-bottom-color: #ea2b2b;
+        }
+
+        /* Module buttons - 3D style */
+        .module-btn {
+            background: linear-gradient(180deg, #ffc800 0%, #ff9600 100%);
+            color: white;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            border-bottom: 4px solid #cc7a00;
+            text-transform: none;
+        }
+        .module-btn:hover { filter: brightness(1.05); }
+        .module-btn:active {
+            transform: translateY(4px);
+            border-bottom-width: 0;
+        }
+        .module-btn.locked {
+            background: linear-gradient(180deg, #e5e5e5 0%, #c4c4c4 100%);
+            border-bottom-color: #9e9e9e;
+            opacity: 0.7;
+            cursor: not-allowed;
+        }
+        .module-btn.locked:active { transform: none; border-bottom-width: 4px; }
+        .module-btn.completed {
+            background: linear-gradient(180deg, #58cc02 0%, #46a302 100%);
+            border-bottom-color: #2d6a00;
+        }
+
+        .header { background: #58cc02; color: white; padding: 16px; }
+        .card { background: white; border-radius: 16px; padding: 24px; margin: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); border: 2px solid #e5e7eb; }
+        input[type="text"] {
+            width: 100%;
+            padding: 16px;
+            font-size: 18px;
+            border: 2px solid #e5e7eb;
+            border-radius: 12px;
+            border-bottom: 4px solid #d1d5db;
+        }
+        input[type="text"]:focus {
+            outline: none;
+            border-color: #58cc02;
+            border-bottom-color: #58a700;
+        }
+        .timer { font-size: 32px; font-weight: bold; font-family: 'Courier New', monospace; }
+        .progress { height: 10px; background: #e5e7eb; border-radius: 5px; overflow: hidden; }
+        .progress-bar { height: 100%; background: linear-gradient(90deg, #58cc02, #78e007); transition: width 0.3s; border-radius: 5px; }
         .icon { font-size: 48px; }
-        .module-btn { background: linear-gradient(135deg, #f59e0b, #d97706); color: white; display: flex; align-items: center; gap: 16px; }
-        .module-btn.locked { background: linear-gradient(135deg, #86efac, #4ade80); opacity: 0.6; cursor: not-allowed; }
-        .module-btn.completed { background: linear-gradient(135deg, #16a34a, #15803d); }
         .stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin: 16px 0; }
-        .stat-box { background: #f0f9ff; padding: 16px; border-radius: 12px; text-align: center; }
-        .stat-num { font-size: 24px; font-weight: bold; color: #0369a1; }
-        .participant { background: white; padding: 16px; border-radius: 12px; margin: 8px 16px; display: flex; justify-content: space-between; align-items: center; border-left: 4px solid #16a34a; }
+        .stat-box { background: white; padding: 16px; border-radius: 12px; text-align: center; border: 2px solid #e5e7eb; }
+        .stat-num { font-size: 24px; font-weight: bold; color: #1cb0f6; }
+        .participant { background: white; padding: 16px; border-radius: 12px; margin: 8px 16px; display: flex; justify-content: space-between; align-items: center; border-left: 4px solid #58cc02; border: 2px solid #e5e7eb; border-left: 4px solid #58cc02; }
+
+        /* Log items */
+        .log-item { padding: 8px; border-radius: 8px; margin: 4px 0; font-size: 13px; display: flex; align-items: center; gap: 8px; }
+        .log-item.correct { background: #d7ffb8; }
+        .log-item.wrong { background: #ffdfe0; }
     </style>
 </head>
 <body>
@@ -108,16 +197,18 @@
             </div>
             <div id="answersContainer" style="padding:0 16px;"></div>
         </div>
-        <div id="feedbackPanel" style="display:none; padding:20px; border-radius:20px 20px 0 0;">
-            <div style="display:flex; gap:12px; align-items:flex-start; margin-bottom:16px;">
-                <span id="feedbackIcon" style="font-size:40px;">🎉</span>
-                <div>
-                    <div id="feedbackTitle" style="font-size:20px; font-weight:bold;"></div>
-                    <div id="feedbackText" style="color:#666; margin-top:4px;"></div>
-                </div>
-            </div>
-            <button id="continueBtn" class="btn btn-green" onclick="nextQuestion()">→ Endelea</button>
         </div>
+
+    <!-- FEEDBACK POPUP (fixed bottom) -->
+    <div id="feedbackPanel" style="display:none; position:fixed; bottom:0; left:0; right:0; padding:20px; border-radius:20px 20px 0 0; box-shadow:0 -4px 20px rgba(0,0,0,0.2); z-index:100;">
+        <div style="display:flex; gap:12px; align-items:flex-start; margin-bottom:16px;">
+            <span id="feedbackIcon" style="font-size:40px;">🎉</span>
+            <div style="flex:1;">
+                <div id="feedbackTitle" style="font-size:20px; font-weight:bold;"></div>
+                <div id="feedbackText" style="color:#666; margin-top:4px; font-size:14px;"></div>
+            </div>
+        </div>
+        <button id="continueBtn" class="btn btn-green" onclick="nextQuestion()">→ Endelea</button>
     </div>
 
     <!-- RESULTS SCREEN -->
@@ -127,7 +218,7 @@
             <div id="resultPercent" style="font-size:56px; font-weight:bold;">0%</div>
             <div id="resultText">0/0 sahihi</div>
         </div>
-        <div style="flex:1; padding:16px;">
+        <div style="flex:1; padding:16px; overflow-y:auto;">
             <div class="stats-grid">
                 <div class="stat-box">
                     <div class="stat-num" id="statQuestions">0</div>
@@ -142,6 +233,8 @@
                     <div style="color:#666; font-size:12px;">Wastani</div>
                 </div>
             </div>
+            <h3 style="margin:16px 0 8px; color:#333;">📋 Rekodi ya Majibu</h3>
+            <div id="answersLog" style="max-height:200px; overflow-y:auto; background:#f9fafb; border-radius:12px; padding:8px;"></div>
         </div>
         <div style="padding:16px;">
             <button class="btn btn-green" onclick="location.reload()">🚀 Mtihani Mpya</button>
@@ -626,7 +719,7 @@
 
             // Show results
             const header = document.getElementById('resultsHeader');
-            header.style.background = accuracy >= 70 ? '#16a34a' : accuracy >= 50 ? '#eab308' : '#dc2626';
+            header.style.background = accuracy >= 70 ? '#58cc02' : accuracy >= 50 ? '#ffc800' : '#ff4b4b';
             document.getElementById('resultEmoji').textContent = accuracy >= 70 ? '🏆' : accuracy >= 50 ? '✅' : '💪';
             document.getElementById('resultPercent').textContent = accuracy + '%';
             document.getElementById('resultText').textContent = totalCorrect + '/' + answers.length + ' sahihi';
@@ -634,7 +727,30 @@
             document.getElementById('statCorrect').textContent = totalCorrect;
             document.getElementById('statTime').textContent = avgTime + 's';
 
+            // Render answers log
+            renderAnswersLog();
+
             showScreen('resultsScreen');
+        }
+
+        function renderAnswersLog() {
+            const container = document.getElementById('answersLog');
+            if (answers.length === 0) {
+                container.innerHTML = '<p style="text-align:center; color:#888; padding:16px;">Hakuna majibu</p>';
+                return;
+            }
+
+            container.innerHTML = answers.map((a, idx) => {
+                const time = a.responseTimeSec || (a.responseTimeMs ? Math.round(a.responseTimeMs/100)/10 : (a.timeMs ? Math.round(a.timeMs/100)/10 : '?'));
+                return `
+                    <div class="log-item ${a.isCorrect ? 'correct' : 'wrong'}">
+                        <span style="font-weight:bold; min-width:24px;">${idx + 1}.</span>
+                        <span style="flex:1;">${a.moduleName || a.module} L${a.level}</span>
+                        <span>${a.isCorrect ? '✓' : '✗'}</span>
+                        <span style="color:#666; font-size:12px;">${time}s</span>
+                    </div>
+                `;
+            }).join('');
         }
 
         // ========== PARTICIPANTS ==========
