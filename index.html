@@ -380,6 +380,9 @@
                 <button class="btn" style="background:#fef3c7; color:#d97706; margin-top:8px; font-size:12px; padding:10px;" onclick="forceRefresh()">
                     🔄 Force Refresh (if broken)
                 </button>
+                <button class="btn" style="background:#fee2e2; color:#dc2626; margin-top:8px; font-size:12px; padding:10px;" onclick="resetAll()">
+                    🗑️ Reset All Data
+                </button>
             </div>
         </div>
     </div>
@@ -656,6 +659,9 @@
             console.log('Debug logs cleared');
         };
 
+        // App version - change this on each deploy to auto-clear cache
+        const APP_VERSION = 'v25';
+
         // Force refresh - clear SW cache and reload
         function forceRefresh() {
             debugLog('ACTION', 'Force refresh requested');
@@ -676,6 +682,33 @@
                 window.location.reload(true);
             }
         }
+
+        // Reset all data and reload
+        function resetAll() {
+            if (confirm('Delete all data and reset app?')) {
+                debugLog('ACTION', 'Reset all requested');
+                localStorage.clear();
+                forceRefresh();
+            }
+        }
+
+        // Auto cache-bust on version change
+        (function checkVersion() {
+            const storedVersion = localStorage.getItem('farmlinguo_version');
+            if (storedVersion !== APP_VERSION) {
+                debugLog('INIT', 'Version changed', { old: storedVersion, new: APP_VERSION });
+                localStorage.setItem('farmlinguo_version', APP_VERSION);
+                if (storedVersion && 'caches' in window) {
+                    // Clear caches on version change
+                    caches.keys().then(function(names) {
+                        names.forEach(function(name) {
+                            caches.delete(name);
+                        });
+                    });
+                    debugLog('INIT', 'Caches cleared due to version change');
+                }
+            }
+        })();
 
         // Function to show logs in UI
         function showDebugLogs() {
@@ -933,8 +966,14 @@
             document.getElementById('displayName').textContent = userName;
             document.getElementById('answeredCount').textContent = '0';
 
+            // Clear any existing timer before starting new one
+            if (timerInterval) {
+                clearInterval(timerInterval);
+                timerInterval = null;
+            }
             timerInterval = setInterval(updateTimer, 1000);
             updateTimer();
+            debugLog('ACTION', 'Timer started', { sessionStart: sessionStart });
 
             renderModules(); // Render level buttons
             showScreen('modulesScreen');
