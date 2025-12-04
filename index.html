@@ -1,0 +1,878 @@
+<!DOCTYPE html>
+<html lang="sw">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>FarmLinguo - Jifunze Kilimo</title>
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#16a34a">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="FarmLinguo">
+    <link rel="apple-touch-icon" href="icon.svg">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        * { font-family: 'Nunito', sans-serif; -webkit-tap-highlight-color: transparent; }
+        body { overscroll-behavior: none; }
+        .btn-3d {
+            transform: translateY(0);
+            box-shadow: 0 6px 0 #166534;
+            transition: all 0.1s ease;
+        }
+        .btn-3d:active {
+            transform: translateY(4px);
+            box-shadow: 0 2px 0 #166534;
+        }
+        .btn-answer {
+            transform: translateY(0);
+            box-shadow: 0 4px 0 #d1d5db;
+            transition: all 0.1s ease;
+        }
+        .btn-answer:active {
+            transform: translateY(3px);
+            box-shadow: 0 1px 0 #d1d5db;
+        }
+        .btn-answer.selected {
+            box-shadow: 0 4px 0 #16a34a;
+            border-color: #16a34a;
+            background: #dcfce7;
+        }
+        .btn-answer.correct {
+            background: #dcfce7;
+            border-color: #16a34a;
+            box-shadow: 0 4px 0 #16a34a;
+        }
+        .btn-answer.wrong {
+            background: #fee2e2;
+            border-color: #dc2626;
+            box-shadow: 0 4px 0 #dc2626;
+        }
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            20% { transform: translateX(-8px); }
+            40% { transform: translateX(8px); }
+            60% { transform: translateX(-8px); }
+            80% { transform: translateX(8px); }
+        }
+        .shake { animation: shake 0.4s ease; }
+        @keyframes pop {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+        .pop { animation: pop 0.3s ease; }
+    </style>
+</head>
+<body class="bg-gradient-to-b from-green-50 to-green-100 min-h-screen">
+    <div id="root"></div>
+
+    <!-- React -->
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+
+    <!-- Question files -->
+    <script src="questions/sw/questions_beans.js"></script>
+    <script src="questions/sw/questions_cashew.js"></script>
+    <script src="questions/sw/questions_drought.js"></script>
+    <script src="questions/sw/questions_maize.js"></script>
+    <script src="questions/sw/questions_tomato.js"></script>
+
+    <script>
+        // ============================================
+        // DATA & STATE MANAGEMENT
+        // ============================================
+
+        const MODULES = [
+            { id: 'beans', name: 'Maharagwe', icon: '🫘', color: 'from-amber-500 to-orange-600', questions: () => window.beansQuestions },
+            { id: 'cashew', name: 'Korosho', icon: '🥜', color: 'from-yellow-500 to-amber-600', questions: () => window.cashewQuestions },
+            { id: 'drought', name: 'Ukame', icon: '🏜️', color: 'from-orange-500 to-red-600', questions: () => window.droughtQuestions },
+            { id: 'maize', name: 'Mahindi', icon: '🌽', color: 'from-yellow-400 to-yellow-600', questions: () => window.maizeQuestions },
+            { id: 'tomato', name: 'Nyanya', icon: '🍅', color: 'from-red-500 to-red-700', questions: () => window.tomatoQuestions }
+        ];
+
+        const SESSION_DURATION = 5 * 60; // 5 minutes in seconds
+
+        // Load saved participants from localStorage
+        function loadParticipants() {
+            try {
+                return JSON.parse(localStorage.getItem('farmlinguo_participants') || '[]');
+            } catch (e) {
+                return [];
+            }
+        }
+
+        // Save participants to localStorage
+        function saveParticipants(participants) {
+            localStorage.setItem('farmlinguo_participants', JSON.stringify(participants));
+        }
+
+        // Get all questions for a module
+        function getModuleQuestions(moduleId) {
+            const module = MODULES.find(m => m.id === moduleId);
+            if (!module) return [];
+            const qData = module.questions();
+            if (!qData) return [];
+
+            let allQuestions = [];
+            Object.keys(qData).forEach(levelKey => {
+                qData[levelKey].forEach((q, idx) => {
+                    allQuestions.push({
+                        ...q,
+                        moduleId,
+                        levelKey,
+                        questionIndex: idx
+                    });
+                });
+            });
+            return allQuestions;
+        }
+
+        // ============================================
+        // REACT APP
+        // ============================================
+
+        const { useState, useEffect, useRef, useCallback } = React;
+
+        function App() {
+            // Screen state
+            const [screen, setScreen] = useState('start'); // start, quiz, results, participants
+
+            // User info
+            const [userName, setUserName] = useState('');
+
+            // Session state
+            const [sessionStart, setSessionStart] = useState(null);
+            const [currentModule, setCurrentModule] = useState(null);
+            const [currentLevel, setCurrentLevel] = useState(1);
+            const [questions, setQuestions] = useState([]);
+            const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+            const [selectedAnswer, setSelectedAnswer] = useState(null);
+            const [showFeedback, setShowFeedback] = useState(false);
+            const [questionStartTime, setQuestionStartTime] = useState(null);
+
+            // Stats
+            const [sessionData, setSessionData] = useState({
+                answers: [],
+                totalCorrect: 0,
+                totalWrong: 0,
+                totalTimeMs: 0,
+                modulesCompleted: {},
+                levelsAttempted: []
+            });
+
+            // Timer
+            const [elapsedSeconds, setElapsedSeconds] = useState(0);
+            const timerRef = useRef(null);
+
+            // Participants
+            const [participants, setParticipants] = useState(loadParticipants());
+            const [selectedParticipant, setSelectedParticipant] = useState(null);
+
+            // Timer effect
+            useEffect(() => {
+                if (screen === 'quiz' && sessionStart) {
+                    timerRef.current = setInterval(() => {
+                        const elapsed = Math.floor((Date.now() - sessionStart) / 1000);
+                        setElapsedSeconds(elapsed);
+
+                        // Auto-end when time is up
+                        if (elapsed >= SESSION_DURATION) {
+                            endSession();
+                        }
+                    }, 1000);
+                }
+                return () => {
+                    if (timerRef.current) clearInterval(timerRef.current);
+                };
+            }, [screen, sessionStart]);
+
+            // Format time as MM:SS
+            const formatTime = (seconds) => {
+                const mins = Math.floor(seconds / 60);
+                const secs = seconds % 60;
+                return `${mins}:${secs.toString().padStart(2, '0')}`;
+            };
+
+            // Start a new session
+            const startSession = () => {
+                if (!userName.trim()) {
+                    alert('Tafadhali andika jina lako!');
+                    return;
+                }
+                setSessionStart(Date.now());
+                setSessionData({
+                    answers: [],
+                    totalCorrect: 0,
+                    totalWrong: 0,
+                    totalTimeMs: 0,
+                    modulesCompleted: {},
+                    levelsAttempted: []
+                });
+                setElapsedSeconds(0);
+                setScreen('modules');
+            };
+
+            // Select a module and start quiz
+            const selectModule = (moduleId) => {
+                const moduleQuestions = getModuleQuestions(moduleId);
+                if (moduleQuestions.length === 0) {
+                    alert('Hakuna maswali kwa moduli hii!');
+                    return;
+                }
+
+                // Get level 1 questions only
+                const module = MODULES.find(m => m.id === moduleId);
+                const qData = module.questions();
+                const level1Key = `${moduleId}_level1`;
+                const level1Questions = qData[level1Key] || [];
+
+                if (level1Questions.length === 0) {
+                    alert('Hakuna maswali!');
+                    return;
+                }
+
+                setCurrentModule(moduleId);
+                setCurrentLevel(1);
+                setQuestions(level1Questions.map((q, i) => ({ ...q, moduleId, levelKey: level1Key, questionIndex: i })));
+                setCurrentQuestionIndex(0);
+                setSelectedAnswer(null);
+                setShowFeedback(false);
+                setQuestionStartTime(Date.now());
+                setScreen('quiz');
+            };
+
+            // Go to next level or back to modules
+            const nextLevel = () => {
+                const module = MODULES.find(m => m.id === currentModule);
+                const qData = module.questions();
+                const nextLevelNum = currentLevel + 1;
+                const nextLevelKey = `${currentModule}_level${nextLevelNum}`;
+                const nextLevelQuestions = qData[nextLevelKey];
+
+                if (nextLevelQuestions && nextLevelQuestions.length > 0) {
+                    setCurrentLevel(nextLevelNum);
+                    setQuestions(nextLevelQuestions.map((q, i) => ({ ...q, moduleId: currentModule, levelKey: nextLevelKey, questionIndex: i })));
+                    setCurrentQuestionIndex(0);
+                    setSelectedAnswer(null);
+                    setShowFeedback(false);
+                    setQuestionStartTime(Date.now());
+                } else {
+                    // No more levels, go back to modules
+                    setScreen('modules');
+                }
+            };
+
+            // Handle answer selection
+            const handleAnswer = (index) => {
+                if (showFeedback) return;
+
+                const question = questions[currentQuestionIndex];
+                const isCorrect = question.options[index].isCorrect;
+                const responseTime = Date.now() - questionStartTime;
+
+                setSelectedAnswer(index);
+                setShowFeedback(true);
+
+                // Record answer
+                const answerData = {
+                    timestamp: Date.now(),
+                    elapsedSeconds: Math.floor((Date.now() - sessionStart) / 1000),
+                    moduleId: currentModule,
+                    level: currentLevel,
+                    questionIndex: currentQuestionIndex,
+                    questionText: question.question,
+                    selectedAnswer: question.options[index].text,
+                    correctAnswer: question.options.find(o => o.isCorrect).text,
+                    isCorrect,
+                    responseTimeMs: responseTime
+                };
+
+                setSessionData(prev => ({
+                    ...prev,
+                    answers: [...prev.answers, answerData],
+                    totalCorrect: prev.totalCorrect + (isCorrect ? 1 : 0),
+                    totalWrong: prev.totalWrong + (isCorrect ? 0 : 1),
+                    totalTimeMs: prev.totalTimeMs + responseTime
+                }));
+            };
+
+            // Go to next question
+            const nextQuestion = () => {
+                if (currentQuestionIndex + 1 >= questions.length) {
+                    // Level complete
+                    setSessionData(prev => ({
+                        ...prev,
+                        levelsAttempted: [...prev.levelsAttempted, {
+                            moduleId: currentModule,
+                            level: currentLevel,
+                            questionsCount: questions.length,
+                            timestamp: Date.now()
+                        }]
+                    }));
+                    nextLevel();
+                } else {
+                    setCurrentQuestionIndex(prev => prev + 1);
+                    setSelectedAnswer(null);
+                    setShowFeedback(false);
+                    setQuestionStartTime(Date.now());
+                }
+            };
+
+            // End session and save results
+            const endSession = useCallback(() => {
+                if (timerRef.current) clearInterval(timerRef.current);
+
+                const participantData = {
+                    id: Date.now(),
+                    name: userName,
+                    date: new Date().toISOString(),
+                    durationSeconds: Math.min(elapsedSeconds, SESSION_DURATION),
+                    totalQuestions: sessionData.answers.length,
+                    correctAnswers: sessionData.totalCorrect,
+                    wrongAnswers: sessionData.totalWrong,
+                    accuracy: sessionData.answers.length > 0
+                        ? Math.round((sessionData.totalCorrect / sessionData.answers.length) * 100)
+                        : 0,
+                    avgResponseTimeMs: sessionData.answers.length > 0
+                        ? Math.round(sessionData.totalTimeMs / sessionData.answers.length)
+                        : 0,
+                    answers: sessionData.answers,
+                    levelsAttempted: sessionData.levelsAttempted,
+                    modulesPlayed: [...new Set(sessionData.answers.map(a => a.moduleId))]
+                };
+
+                const updatedParticipants = [...participants, participantData];
+                setParticipants(updatedParticipants);
+                saveParticipants(updatedParticipants);
+
+                setScreen('results');
+            }, [userName, elapsedSeconds, sessionData, participants]);
+
+            // Export all data as JSON
+            const exportData = () => {
+                const data = {
+                    exportDate: new Date().toISOString(),
+                    totalParticipants: participants.length,
+                    participants: participants
+                };
+                const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `farmlinguo_data_${new Date().toISOString().split('T')[0]}.json`;
+                a.click();
+                URL.revokeObjectURL(url);
+            };
+
+            // Export as CSV
+            const exportCSV = () => {
+                let csv = 'Jina,Tarehe,Muda (s),Maswali,Sahihi,Makosa,Usahihi (%),Muda wa Wastani (ms)\n';
+                participants.forEach(p => {
+                    csv += `"${p.name}",${p.date},${p.durationSeconds},${p.totalQuestions},${p.correctAnswers},${p.wrongAnswers},${p.accuracy},${p.avgResponseTimeMs}\n`;
+                });
+                const blob = new Blob([csv], { type: 'text/csv' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `farmlinguo_data_${new Date().toISOString().split('T')[0]}.csv`;
+                a.click();
+                URL.revokeObjectURL(url);
+            };
+
+            // Clear all data
+            const clearData = () => {
+                if (confirm('Una uhakika unataka kufuta data yote?')) {
+                    setParticipants([]);
+                    saveParticipants([]);
+                }
+            };
+
+            // ============================================
+            // RENDER SCREENS
+            // ============================================
+
+            // START SCREEN
+            if (screen === 'start') {
+                return (
+                    <div className="min-h-screen flex flex-col p-4">
+                        {/* Header */}
+                        <div className="text-center py-8">
+                            <div className="text-6xl mb-4">🌱</div>
+                            <h1 className="text-3xl font-bold text-green-700">FarmLinguo</h1>
+                            <p className="text-gray-500 mt-2">Jifunze Kilimo kwa Kiswahili</p>
+                        </div>
+
+                        {/* Name Input Card */}
+                        <div className="bg-white rounded-3xl shadow-xl p-6 mb-6">
+                            <label className="block text-lg font-bold text-gray-700 mb-3">
+                                👤 Jina lako:
+                            </label>
+                            <input
+                                type="text"
+                                value={userName}
+                                onChange={(e) => setUserName(e.target.value)}
+                                placeholder="Andika jina hapa..."
+                                className="w-full px-4 py-4 text-xl border-2 border-gray-200 rounded-2xl focus:border-green-500 focus:outline-none"
+                            />
+                        </div>
+
+                        {/* Start Button */}
+                        <button
+                            onClick={startSession}
+                            disabled={!userName.trim()}
+                            className={`w-full py-5 rounded-2xl text-white text-xl font-bold btn-3d ${userName.trim() ? 'bg-green-600' : 'bg-gray-300'}`}
+                        >
+                            🚀 Anza Mtihani
+                        </button>
+
+                        <p className="text-center text-gray-400 text-sm mt-4">
+                            ⏱️ Dakika 5 • 📚 Moduli 5
+                        </p>
+
+                        {/* Stats & Participants Button */}
+                        {participants.length > 0 && (
+                            <div className="mt-6">
+                                <button
+                                    onClick={() => setScreen('participants')}
+                                    className="w-full py-4 bg-blue-100 text-blue-700 rounded-2xl font-bold flex items-center justify-center gap-2"
+                                >
+                                    👥 Washiriki ({participants.length})
+                                </button>
+                            </div>
+                        )}
+                    </div>
+                );
+            }
+
+            // MODULES SCREEN
+            if (screen === 'modules') {
+                const remaining = SESSION_DURATION - elapsedSeconds;
+                const isTimeUp = remaining <= 0;
+
+                if (isTimeUp) {
+                    endSession();
+                    return null;
+                }
+
+                return (
+                    <div className="min-h-screen flex flex-col">
+                        {/* Timer Header */}
+                        <div className={`p-4 text-white ${remaining < 60 ? 'bg-red-600' : 'bg-green-600'}`}>
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                    <span className="text-2xl">⏱️</span>
+                                    <div>
+                                        <div className="font-bold">{userName}</div>
+                                        <div className="text-sm opacity-80">{sessionData.answers.length} maswali</div>
+                                    </div>
+                                </div>
+                                <div className="text-right">
+                                    <div className="text-3xl font-bold font-mono">{formatTime(remaining)}</div>
+                                    <div className="text-sm opacity-80">zimebaki</div>
+                                </div>
+                            </div>
+                            {/* Progress bar */}
+                            <div className="mt-3 bg-white/20 rounded-full h-2">
+                                <div
+                                    className="bg-white h-full rounded-full transition-all duration-1000"
+                                    style={{ width: `${(elapsedSeconds / SESSION_DURATION) * 100}%` }}
+                                />
+                            </div>
+                        </div>
+
+                        {/* Module Selection */}
+                        <div className="flex-1 p-4">
+                            <h2 className="text-xl font-bold text-gray-700 mb-4 text-center">Chagua Moduli</h2>
+                            <div className="space-y-3">
+                                {MODULES.map(module => (
+                                    <button
+                                        key={module.id}
+                                        onClick={() => selectModule(module.id)}
+                                        className={`w-full p-5 rounded-2xl bg-gradient-to-r ${module.color} text-white shadow-lg flex items-center gap-4 active:scale-[0.98] transition`}
+                                    >
+                                        <span className="text-4xl">{module.icon}</span>
+                                        <div className="text-left">
+                                            <div className="text-xl font-bold">{module.name}</div>
+                                            <div className="text-sm opacity-80">Bofya kuanza</div>
+                                        </div>
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* End Session Button */}
+                        <div className="p-4">
+                            <button
+                                onClick={endSession}
+                                className="w-full py-4 bg-red-100 text-red-600 rounded-2xl font-bold"
+                            >
+                                🛑 Maliza Mtihani
+                            </button>
+                        </div>
+                    </div>
+                );
+            }
+
+            // QUIZ SCREEN
+            if (screen === 'quiz') {
+                const remaining = SESSION_DURATION - elapsedSeconds;
+                const question = questions[currentQuestionIndex];
+                const module = MODULES.find(m => m.id === currentModule);
+                const isCorrect = showFeedback && question.options[selectedAnswer]?.isCorrect;
+
+                if (remaining <= 0) {
+                    endSession();
+                    return null;
+                }
+
+                return (
+                    <div className="min-h-screen flex flex-col bg-gray-50">
+                        {/* Header */}
+                        <div className={`p-3 ${remaining < 60 ? 'bg-red-600' : 'bg-gray-800'} text-white`}>
+                            <div className="flex items-center justify-between mb-2">
+                                <button
+                                    onClick={() => setScreen('modules')}
+                                    className="text-2xl p-1"
+                                >
+                                    ✕
+                                </button>
+                                <div className="flex items-center gap-2">
+                                    <span className="text-xl">{module.icon}</span>
+                                    <span className="font-bold">L{currentLevel}</span>
+                                </div>
+                                <div className="font-mono font-bold text-xl">
+                                    {formatTime(remaining)}
+                                </div>
+                            </div>
+                            {/* Progress bar */}
+                            <div className="bg-white/20 rounded-full h-2">
+                                <div
+                                    className="bg-green-400 h-full rounded-full transition-all"
+                                    style={{ width: `${((currentQuestionIndex + 1) / questions.length) * 100}%` }}
+                                />
+                            </div>
+                        </div>
+
+                        {/* Question Card */}
+                        <div className="p-4">
+                            <div className="bg-white rounded-2xl p-5 shadow-lg">
+                                <div className="flex items-start gap-3">
+                                    <span className="text-3xl">{module.icon}</span>
+                                    <h2 className="text-xl font-bold text-gray-800 flex-1">
+                                        {question.question}
+                                    </h2>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Answer Options */}
+                        <div className="flex-1 px-4 pb-4">
+                            <div className="space-y-3">
+                                {question.options.map((option, idx) => {
+                                    let classes = 'btn-answer w-full p-4 rounded-2xl bg-white border-2 border-gray-200 text-left flex items-center gap-3';
+
+                                    if (showFeedback) {
+                                        if (option.isCorrect) {
+                                            classes += ' correct pop';
+                                        } else if (idx === selectedAnswer && !option.isCorrect) {
+                                            classes += ' wrong shake';
+                                        } else {
+                                            classes += ' opacity-50';
+                                        }
+                                    } else if (idx === selectedAnswer) {
+                                        classes += ' selected';
+                                    }
+
+                                    return (
+                                        <button
+                                            key={idx}
+                                            onClick={() => handleAnswer(idx)}
+                                            disabled={showFeedback}
+                                            className={classes}
+                                        >
+                                            {option.icon && <span className="text-2xl">{option.icon}</span>}
+                                            <span className="font-bold text-gray-800 flex-1">{option.text}</span>
+                                            {showFeedback && option.isCorrect && <span className="text-2xl">✓</span>}
+                                            {showFeedback && idx === selectedAnswer && !option.isCorrect && <span className="text-2xl">✗</span>}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        </div>
+
+                        {/* Feedback Panel */}
+                        {showFeedback && (
+                            <div className={`p-4 ${isCorrect ? 'bg-green-100' : 'bg-red-100'} rounded-t-3xl shadow-lg`}>
+                                <div className="flex items-center gap-3 mb-3">
+                                    <span className="text-4xl">{isCorrect ? '🎉' : '😢'}</span>
+                                    <div>
+                                        <div className={`font-bold text-xl ${isCorrect ? 'text-green-700' : 'text-red-700'}`}>
+                                            {isCorrect ? 'Vizuri sana!' : 'Si sawa kabisa'}
+                                        </div>
+                                        {question.explanation && (
+                                            <div className="text-gray-600 text-sm mt-1">{question.explanation}</div>
+                                        )}
+                                    </div>
+                                </div>
+                                <button
+                                    onClick={nextQuestion}
+                                    className={`w-full py-4 rounded-2xl font-bold text-xl text-white ${isCorrect ? 'bg-green-600' : 'bg-red-600'}`}
+                                >
+                                    → Endelea
+                                </button>
+                            </div>
+                        )}
+                    </div>
+                );
+            }
+
+            // RESULTS SCREEN
+            if (screen === 'results') {
+                const accuracy = sessionData.answers.length > 0
+                    ? Math.round((sessionData.totalCorrect / sessionData.answers.length) * 100)
+                    : 0;
+                const avgTime = sessionData.answers.length > 0
+                    ? Math.round(sessionData.totalTimeMs / sessionData.answers.length / 1000 * 10) / 10
+                    : 0;
+
+                return (
+                    <div className="min-h-screen flex flex-col">
+                        {/* Result Header */}
+                        <div className={`p-6 text-white text-center ${accuracy >= 70 ? 'bg-green-600' : accuracy >= 50 ? 'bg-yellow-500' : 'bg-red-600'}`}>
+                            <div className="text-5xl mb-2">{accuracy >= 70 ? '🏆' : accuracy >= 50 ? '✅' : '💪'}</div>
+                            <div className="text-5xl font-bold mb-1">{accuracy}%</div>
+                            <div className="text-lg opacity-90">
+                                {sessionData.totalCorrect}/{sessionData.answers.length} sahihi
+                            </div>
+                        </div>
+
+                        {/* Stats Grid */}
+                        <div className="p-4">
+                            <div className="bg-white rounded-2xl p-4 shadow-lg mb-4">
+                                <h3 className="font-bold text-gray-700 mb-3">📊 Takwimu</h3>
+                                <div className="grid grid-cols-3 gap-3 text-center">
+                                    <div className="bg-blue-50 rounded-xl p-3">
+                                        <div className="text-2xl font-bold text-blue-600">{sessionData.answers.length}</div>
+                                        <div className="text-xs text-gray-500">Maswali</div>
+                                    </div>
+                                    <div className="bg-green-50 rounded-xl p-3">
+                                        <div className="text-2xl font-bold text-green-600">{sessionData.totalCorrect}</div>
+                                        <div className="text-xs text-gray-500">Sahihi</div>
+                                    </div>
+                                    <div className="bg-orange-50 rounded-xl p-3">
+                                        <div className="text-2xl font-bold text-orange-600">{avgTime}s</div>
+                                        <div className="text-xs text-gray-500">Wastani</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Modules Played */}
+                            <div className="bg-white rounded-2xl p-4 shadow-lg mb-4">
+                                <h3 className="font-bold text-gray-700 mb-3">📚 Moduli Zilizochezwa</h3>
+                                <div className="flex flex-wrap gap-2">
+                                    {[...new Set(sessionData.answers.map(a => a.moduleId))].map(modId => {
+                                        const mod = MODULES.find(m => m.id === modId);
+                                        return (
+                                            <span key={modId} className="bg-gray-100 px-3 py-2 rounded-full flex items-center gap-1">
+                                                <span>{mod.icon}</span>
+                                                <span className="font-bold">{mod.name}</span>
+                                            </span>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Action Buttons */}
+                        <div className="p-4 mt-auto space-y-3">
+                            <button
+                                onClick={() => {
+                                    setUserName('');
+                                    setSessionStart(null);
+                                    setSessionData({ answers: [], totalCorrect: 0, totalWrong: 0, totalTimeMs: 0, modulesCompleted: {}, levelsAttempted: [] });
+                                    setScreen('start');
+                                }}
+                                className="w-full py-4 bg-green-600 text-white rounded-2xl font-bold btn-3d"
+                            >
+                                🚀 Mtihani Mpya
+                            </button>
+                            <button
+                                onClick={() => setScreen('participants')}
+                                className="w-full py-4 bg-blue-100 text-blue-700 rounded-2xl font-bold"
+                            >
+                                👥 Washiriki Wote ({participants.length})
+                            </button>
+                        </div>
+                    </div>
+                );
+            }
+
+            // PARTICIPANTS SCREEN
+            if (screen === 'participants') {
+                // Show participant detail
+                if (selectedParticipant) {
+                    const p = selectedParticipant;
+                    return (
+                        <div className="min-h-screen flex flex-col bg-gray-50">
+                            {/* Header */}
+                            <div className="bg-gray-800 text-white p-4 flex items-center gap-3">
+                                <button onClick={() => setSelectedParticipant(null)} className="text-2xl">←</button>
+                                <div className="font-bold text-lg truncate flex-1">{p.name}</div>
+                            </div>
+
+                            {/* Score Card */}
+                            <div className={`p-6 text-white text-center ${p.accuracy >= 70 ? 'bg-green-600' : p.accuracy >= 50 ? 'bg-yellow-500' : 'bg-red-600'}`}>
+                                <div className="text-4xl mb-1">{p.accuracy >= 70 ? '🏆' : p.accuracy >= 50 ? '✅' : '💪'}</div>
+                                <div className="text-5xl font-bold">{p.accuracy}%</div>
+                                <div className="opacity-90">{p.correctAnswers}/{p.totalQuestions} sahihi</div>
+                            </div>
+
+                            {/* Stats */}
+                            <div className="p-4 space-y-3 flex-1 overflow-y-auto">
+                                <div className="bg-white rounded-xl p-4 shadow">
+                                    <div className="grid grid-cols-2 gap-3 text-center">
+                                        <div>
+                                            <div className="text-2xl font-bold text-blue-600">{Math.floor(p.durationSeconds / 60)}:{(p.durationSeconds % 60).toString().padStart(2, '0')}</div>
+                                            <div className="text-xs text-gray-500">Muda</div>
+                                        </div>
+                                        <div>
+                                            <div className="text-2xl font-bold text-orange-600">{(p.avgResponseTimeMs / 1000).toFixed(1)}s</div>
+                                            <div className="text-xs text-gray-500">Wastani</div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Modules */}
+                                {p.modulesPlayed && p.modulesPlayed.length > 0 && (
+                                    <div className="bg-white rounded-xl p-4 shadow">
+                                        <h4 className="font-bold text-gray-700 mb-2">Moduli:</h4>
+                                        <div className="flex flex-wrap gap-2">
+                                            {p.modulesPlayed.map(modId => {
+                                                const mod = MODULES.find(m => m.id === modId);
+                                                return mod ? (
+                                                    <span key={modId} className="bg-gray-100 px-2 py-1 rounded-full text-sm flex items-center gap-1">
+                                                        {mod.icon} {mod.name}
+                                                    </span>
+                                                ) : null;
+                                            })}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Answer History */}
+                                {p.answers && p.answers.length > 0 && (
+                                    <div className="bg-white rounded-xl p-4 shadow">
+                                        <h4 className="font-bold text-gray-700 mb-2">Majibu ({p.answers.length}):</h4>
+                                        <div className="max-h-60 overflow-y-auto space-y-2">
+                                            {p.answers.map((a, idx) => (
+                                                <div key={idx} className={`p-2 rounded-lg text-sm ${a.isCorrect ? 'bg-green-50' : 'bg-red-50'}`}>
+                                                    <div className="flex items-start gap-2">
+                                                        <span>{a.isCorrect ? '✅' : '❌'}</span>
+                                                        <div className="flex-1 min-w-0">
+                                                            <div className="font-medium truncate">{a.questionText}</div>
+                                                            <div className={a.isCorrect ? 'text-green-600' : 'text-red-600'}>
+                                                                {a.selectedAnswer}
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+
+                            <div className="p-4">
+                                <button
+                                    onClick={() => setSelectedParticipant(null)}
+                                    className="w-full py-3 bg-gray-200 rounded-xl font-bold"
+                                >
+                                    ← Rudi
+                                </button>
+                            </div>
+                        </div>
+                    );
+                }
+
+                // Participants List
+                return (
+                    <div className="min-h-screen flex flex-col bg-gray-50">
+                        {/* Header */}
+                        <div className="bg-blue-600 text-white p-4">
+                            <div className="flex items-center justify-between">
+                                <button onClick={() => setScreen('start')} className="text-2xl">←</button>
+                                <h1 className="font-bold text-lg">👥 Washiriki ({participants.length})</h1>
+                                <div></div>
+                            </div>
+                        </div>
+
+                        {/* Export Buttons */}
+                        <div className="p-4 flex gap-2">
+                            <button onClick={exportData} className="flex-1 py-2 bg-green-100 text-green-700 rounded-xl font-bold text-sm">
+                                📥 JSON
+                            </button>
+                            <button onClick={exportCSV} className="flex-1 py-2 bg-blue-100 text-blue-700 rounded-xl font-bold text-sm">
+                                📊 CSV
+                            </button>
+                            <button onClick={clearData} className="py-2 px-3 bg-red-100 text-red-600 rounded-xl font-bold text-sm">
+                                🗑️
+                            </button>
+                        </div>
+
+                        {/* Participants List */}
+                        <div className="flex-1 overflow-y-auto px-4 pb-4">
+                            {participants.length === 0 ? (
+                                <div className="text-center text-gray-400 py-8">
+                                    Hakuna washiriki bado
+                                </div>
+                            ) : (
+                                <div className="space-y-2">
+                                    {[...participants].reverse().map((p, idx) => (
+                                        <button
+                                            key={p.id || idx}
+                                            onClick={() => setSelectedParticipant(p)}
+                                            className={`w-full p-4 bg-white rounded-xl shadow text-left flex items-center justify-between ${p.accuracy >= 70 ? 'border-l-4 border-green-500' : p.accuracy >= 50 ? 'border-l-4 border-yellow-500' : 'border-l-4 border-red-500'}`}
+                                        >
+                                            <div className="min-w-0 flex-1">
+                                                <div className="font-bold text-gray-800 truncate">{p.name}</div>
+                                                <div className="text-xs text-gray-500">
+                                                    {new Date(p.date).toLocaleDateString()} • {p.totalQuestions} maswali
+                                                </div>
+                                            </div>
+                                            <div className={`text-2xl font-bold ${p.accuracy >= 70 ? 'text-green-600' : p.accuracy >= 50 ? 'text-yellow-600' : 'text-red-600'}`}>
+                                                {p.accuracy}%
+                                            </div>
+                                        </button>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                );
+            }
+
+            return null;
+        }
+
+        // Render React App
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(React.createElement(App));
+    </script>
+
+    <!-- PWA Install -->
+    <script>
+        window.deferredPrompt = null;
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            window.deferredPrompt = e;
+        });
+
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('sw.js').catch(() => {});
+            });
+        }
+    </script>
+</body>
+</html>
