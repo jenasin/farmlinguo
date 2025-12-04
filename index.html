@@ -204,6 +204,150 @@
         .log-item { padding: 8px; border-radius: 8px; margin: 4px 0; font-size: 13px; display: flex; align-items: center; gap: 8px; }
         .log-item.correct { background: #d7ffb8; }
         .log-item.wrong { background: #ffdfe0; }
+
+        /* Level Complete Screen - Duolingo Style */
+        .level-complete-screen {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        .level-complete-screen.success { background: #f0fdf4; }
+        .level-complete-screen.fail { background: #fff7f7; }
+
+        .lc-header {
+            padding: 48px 24px 32px;
+            text-align: center;
+            border-radius: 0 0 32px 32px;
+            position: relative;
+        }
+        .lc-header.success { background: linear-gradient(180deg, #58cc02 0%, #46a302 100%); }
+        .lc-header.fail { background: linear-gradient(180deg, #ff4b4b 0%, #d73c3c 100%); }
+
+        .lc-emoji {
+            font-size: 72px;
+            filter: drop-shadow(0 4px 8px rgba(0,0,0,0.2));
+            animation: lcBounce 0.6s ease-out;
+        }
+        @keyframes lcBounce {
+            0% { transform: scale(0) rotate(-10deg); }
+            50% { transform: scale(1.2) rotate(5deg); }
+            100% { transform: scale(1) rotate(0); }
+        }
+
+        .lc-percent {
+            font-size: 64px;
+            font-weight: 800;
+            color: white;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.2);
+            margin: 8px 0;
+        }
+        .lc-score {
+            font-size: 18px;
+            color: rgba(255,255,255,0.9);
+            font-weight: 600;
+        }
+        .lc-title {
+            font-size: 24px;
+            font-weight: 800;
+            color: white;
+            margin-top: 12px;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.2);
+        }
+
+        .lc-card {
+            background: white;
+            border-radius: 24px;
+            padding: 24px;
+            margin: -24px 16px 16px;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+            text-align: center;
+            position: relative;
+            z-index: 10;
+        }
+        .lc-card-icon {
+            font-size: 48px;
+            margin-bottom: 12px;
+        }
+        .lc-card-title {
+            font-size: 20px;
+            font-weight: 800;
+            margin-bottom: 8px;
+        }
+        .lc-card-title.success { color: #58cc02; }
+        .lc-card-title.fail { color: #ff4b4b; }
+        .lc-card-text {
+            font-size: 16px;
+            color: #666;
+            line-height: 1.5;
+        }
+
+        .lc-buttons {
+            padding: 16px;
+            margin-top: auto;
+        }
+        .lc-btn {
+            width: 100%;
+            padding: 18px 24px;
+            border: none;
+            border-radius: 16px;
+            font-size: 18px;
+            font-weight: 800;
+            cursor: pointer;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            transition: transform 0.1s ease, filter 0.1s ease;
+            margin-bottom: 12px;
+        }
+        .lc-btn:active {
+            transform: translateY(4px);
+            border-bottom-width: 0 !important;
+        }
+        .lc-btn-primary.success {
+            background: #58cc02;
+            color: white;
+            border-bottom: 4px solid #46a302;
+        }
+        .lc-btn-primary.fail {
+            background: #ffc800;
+            color: #1a1a1a;
+            border-bottom: 4px solid #cca000;
+        }
+        .lc-btn-secondary {
+            background: #e5e5e5;
+            color: #666;
+            border-bottom: 4px solid #c4c4c4;
+        }
+        .lc-btn:hover { filter: brightness(1.05); }
+
+        .lc-progress-ring {
+            display: inline-block;
+            position: relative;
+            width: 120px;
+            height: 120px;
+            margin: 16px 0;
+        }
+        .lc-progress-ring svg {
+            transform: rotate(-90deg);
+        }
+        .lc-progress-ring circle {
+            fill: none;
+            stroke-width: 10;
+        }
+        .lc-progress-ring .bg { stroke: rgba(255,255,255,0.3); }
+        .lc-progress-ring .progress {
+            stroke: white;
+            stroke-linecap: round;
+            transition: stroke-dashoffset 1s ease-out;
+        }
+        .lc-progress-text {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 32px;
+            font-weight: 800;
+            color: white;
+        }
     </style>
 </head>
 <body>
@@ -342,27 +486,32 @@
         </div>
     </div>
 
-    <!-- LEVEL COMPLETE SCREEN -->
-    <div id="levelCompleteScreen" class="screen">
-        <div id="levelCompleteHeader" style="padding:32px; text-align:center; color:white;">
-            <div id="levelEmoji" style="font-size:64px;">🎉</div>
-            <div id="levelTitle" style="font-size:24px; font-weight:bold; margin:12px 0;">Kiwango Kimekamilika!</div>
-            <div id="levelPercent" style="font-size:48px; font-weight:bold;">0%</div>
-            <div id="levelScore">0/5 sahihi</div>
-        </div>
-        <div style="flex:1; padding:16px;">
-            <div id="levelMessage" style="text-align:center; padding:20px; background:white; border-radius:16px; margin-bottom:16px;">
+    <!-- LEVEL COMPLETE SCREEN - Duolingo Style -->
+    <div id="levelCompleteScreen" class="screen level-complete-screen">
+        <div id="lcHeader" class="lc-header">
+            <div id="lcEmoji" class="lc-emoji">🎉</div>
+            <div class="lc-progress-ring">
+                <svg width="120" height="120">
+                    <circle class="bg" cx="60" cy="60" r="50"/>
+                    <circle id="lcProgressCircle" class="progress" cx="60" cy="60" r="50" stroke-dasharray="314" stroke-dashoffset="314"/>
+                </svg>
+                <div id="lcPercent" class="lc-progress-text">0%</div>
             </div>
+            <div id="lcScore" class="lc-score">0/5 sahihi</div>
+            <div id="lcTitle" class="lc-title">Hongera!</div>
         </div>
-        <div style="padding:16px;">
-            <button id="continueBtn2" class="btn btn-green" style="display:none;" onclick="continueToNext()">
-                ➡️ Endelea Kiwango Kifuatacho
+        <div class="lc-card">
+            <div id="lcCardIcon" class="lc-card-icon">🏆</div>
+            <div id="lcCardTitle" class="lc-card-title">Umefanya vizuri!</div>
+            <div id="lcCardText" class="lc-card-text">Kiwango kifuatacho kimefunguliwa.</div>
+        </div>
+        <div style="flex:1;"></div>
+        <div class="lc-buttons">
+            <button id="lcBtnPrimary" class="lc-btn lc-btn-primary" onclick="continueToNext()">
+                ➡️ Endelea
             </button>
-            <button id="repeatBtn" class="btn" style="background:#fef3c7; color:#d97706;" onclick="repeatLevel()">
-                🔄 Rudia Kiwango Hiki
-            </button>
-            <button class="btn" style="background:#e5e7eb; color:#666; margin-top:8px;" onclick="renderModules(); showScreen('modulesScreen')">
-                📋 Rudi kwenye Orodha
+            <button class="lc-btn lc-btn-secondary" onclick="renderModules(); showScreen('modulesScreen')">
+                📋 Orodha ya Viwango
             </button>
         </div>
     </div>
@@ -769,6 +918,67 @@
             }
         }
 
+        function showSuccessScreen(percent, correct, total) {
+            const screen = document.getElementById('levelCompleteScreen');
+            const header = document.getElementById('lcHeader');
+            const btn = document.getElementById('lcBtnPrimary');
+
+            screen.className = 'screen level-complete-screen success';
+            header.className = 'lc-header success';
+            btn.className = 'lc-btn lc-btn-primary success';
+            btn.innerHTML = '➡️ Endelea';
+            btn.onclick = continueToNext;
+
+            document.getElementById('lcEmoji').textContent = '🎉';
+            document.getElementById('lcPercent').textContent = percent + '%';
+            document.getElementById('lcScore').textContent = correct + '/' + total + ' sahihi';
+            document.getElementById('lcTitle').textContent = 'Hongera! Umefaulu!';
+
+            document.getElementById('lcCardIcon').textContent = '🏆';
+            document.getElementById('lcCardTitle').textContent = 'Umefanya vizuri sana!';
+            document.getElementById('lcCardTitle').className = 'lc-card-title success';
+            document.getElementById('lcCardText').textContent = 'Kiwango kifuatacho kimefunguliwa. Endelea kujifunza!';
+
+            // Animate progress ring
+            const circumference = 314;
+            const offset = circumference - (percent / 100 * circumference);
+            setTimeout(() => {
+                document.getElementById('lcProgressCircle').style.strokeDashoffset = offset;
+            }, 100);
+        }
+
+        function showFailScreen(percent, correct, total, needed) {
+            const screen = document.getElementById('levelCompleteScreen');
+            const header = document.getElementById('lcHeader');
+            const btn = document.getElementById('lcBtnPrimary');
+
+            screen.className = 'screen level-complete-screen fail';
+            header.className = 'lc-header fail';
+            btn.className = 'lc-btn lc-btn-primary fail';
+            btn.innerHTML = '🔄 Jaribu Tena';
+            btn.onclick = repeatLevel;
+
+            document.getElementById('lcEmoji').textContent = '😢';
+            document.getElementById('lcPercent').textContent = percent + '%';
+            document.getElementById('lcScore').textContent = correct + '/' + total + ' sahihi';
+            document.getElementById('lcTitle').textContent = 'Hukufaulu';
+
+            const missing = needed - correct;
+            document.getElementById('lcCardIcon').textContent = '💪';
+            document.getElementById('lcCardTitle').textContent = 'Usikate tamaa!';
+            document.getElementById('lcCardTitle').className = 'lc-card-title fail';
+            document.getElementById('lcCardText').textContent =
+                'Unahitaji ' + PASS_THRESHOLD + '% (' + needed + '/' + total + ') kufaulu. ' +
+                'Ulihitaji maswali ' + missing + ' zaidi sahihi. Jaribu tena!';
+
+            // Animate progress ring
+            const circumference = 314;
+            const offset = circumference - (percent / 100 * circumference);
+            setTimeout(() => {
+                document.getElementById('lcProgressCircle').style.strokeDashoffset = offset;
+            }, 100);
+        }
+
         function showLevelComplete() {
             // Hide feedback overlay
             document.getElementById('feedbackOverlay').style.display = 'none';
@@ -777,45 +987,19 @@
             const percent = Math.round(levelCorrect / levelTotal * 100);
             const passed = percent >= PASS_THRESHOLD;
             const needed = Math.ceil(levelTotal * PASS_THRESHOLD / 100);
-            const missing = needed - levelCorrect;
 
-            const lvl = LEVELS[currentLevelIndex];
-            const header = document.getElementById('levelCompleteHeader');
+            // Reset progress ring
+            document.getElementById('lcProgressCircle').style.strokeDashoffset = 314;
 
             if (passed) {
-                // SUCCESS - green screen
-                header.style.background = '#58cc02';
-                document.getElementById('levelEmoji').textContent = '🎉';
-                document.getElementById('levelTitle').textContent = 'Hongera! Umefaulu!';
-                document.getElementById('levelMessage').innerHTML =
-                    '<div style="color:#16a34a; font-size:18px; font-weight:bold;">✓ Umepita kiwango hiki!</div>' +
-                    '<div style="color:#666; margin-top:8px;">Kiwango kifuatacho kimefunguliwa.</div>';
-
                 // Unlock next level
                 if (currentLevelIndex >= unlockedIndex) {
                     unlockedIndex = currentLevelIndex + 1;
                 }
-
-                // Show continue button
-                document.getElementById('continueBtn2').style.display = 'block';
-                document.getElementById('repeatBtn').style.display = 'none';
+                showSuccessScreen(percent, levelCorrect, levelTotal);
             } else {
-                // FAIL - orange/red screen
-                header.style.background = '#dc2626';
-                document.getElementById('levelEmoji').textContent = '😢';
-                document.getElementById('levelTitle').textContent = 'Hukufaulu';
-                document.getElementById('levelMessage').innerHTML =
-                    '<div style="color:#dc2626; font-size:18px; font-weight:bold;">✗ Unahitaji ' + PASS_THRESHOLD + '% kufungua kiwango kifuatacho</div>' +
-                    '<div style="color:#666; margin-top:8px;">Ulikuwa na ' + levelCorrect + '/' + levelTotal + '. Ulihitaji angalau ' + needed + ' sahihi.</div>' +
-                    '<div style="color:#666; margin-top:4px;">Maswali ' + missing + ' zaidi sahihi yangehitajika.</div>';
-
-                // Hide continue, show repeat
-                document.getElementById('continueBtn2').style.display = 'none';
-                document.getElementById('repeatBtn').style.display = 'block';
+                showFailScreen(percent, levelCorrect, levelTotal, needed);
             }
-
-            document.getElementById('levelPercent').textContent = percent + '%';
-            document.getElementById('levelScore').textContent = levelCorrect + '/' + levelTotal + ' sahihi';
 
             // Auto-save progress after each level
             saveProgress();
