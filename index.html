@@ -734,7 +734,7 @@
 
             const duration = Math.floor((Date.now() - sessionStart) / 1000);
             const accuracy = answers.length > 0 ? Math.round(totalCorrect / answers.length * 100) : 0;
-            const avgTime = answers.length > 0 ? Math.round(answers.reduce((a, b) => a + b.timeMs, 0) / answers.length / 1000 * 10) / 10 : 0;
+            const avgTime = answers.length > 0 ? Math.round(answers.reduce((a, b) => a + (b.responseTimeMs || b.timeMs || 0), 0) / answers.length / 1000 * 10) / 10 : 0;
 
             // Check if this session already exists (update instead of create new)
             const list = getParticipants();
@@ -791,7 +791,7 @@
             saveProgress();
 
             const accuracy = answers.length > 0 ? Math.round(totalCorrect / answers.length * 100) : 0;
-            const avgTime = answers.length > 0 ? Math.round(answers.reduce((a, b) => a + b.timeMs, 0) / answers.length / 1000 * 10) / 10 : 0;
+            const avgTime = answers.length > 0 ? Math.round(answers.reduce((a, b) => a + (b.responseTimeMs || b.timeMs || 0), 0) / answers.length / 1000 * 10) / 10 : 0;
 
             // Show results
             const header = document.getElementById('resultsHeader');
