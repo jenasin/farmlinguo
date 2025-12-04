@@ -1,4 +1,4 @@
-const CACHE_NAME = 'farmlinguo-v14';
+const CACHE_NAME = 'farmlinguo-v15';
 const ASSETS = [
     '/',
     '/index.html',

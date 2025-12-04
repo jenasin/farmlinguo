@@ -818,12 +818,16 @@
 
             container.innerHTML = answers.map((a, idx) => {
                 const time = a.responseTimeSec || (a.responseTimeMs ? Math.round(a.responseTimeMs/100)/10 : (a.timeMs ? Math.round(a.timeMs/100)/10 : '?'));
+                const ts = a.timestamp ? new Date(a.timestamp).toLocaleTimeString('cs-CZ') : '';
+                const questionShort = (a.questionText || a.question || '').substring(0, 50) + ((a.questionText || a.question || '').length > 50 ? '...' : '');
                 return `
-                    <div class="log-item ${a.isCorrect ? 'correct' : 'wrong'}">
+                    <div class="log-item ${a.isCorrect ? 'correct' : 'wrong'}" style="flex-wrap:wrap;">
                         <span style="font-weight:bold; min-width:24px;">${idx + 1}.</span>
-                        <span style="flex:1;">${a.moduleName || a.module} L${a.level}</span>
+                        <span style="color:#888; font-size:11px; min-width:60px;">${ts}</span>
+                        <span>${a.moduleName || a.module} L${a.level}</span>
                         <span>${a.isCorrect ? '✓' : '✗'}</span>
                         <span style="color:#666; font-size:12px;">${time}s</span>
+                        <div style="width:100%; font-size:11px; color:#555; margin-top:4px; padding-left:24px;">${questionShort}</div>
                     </div>
                 `;
             }).join('');
@@ -849,11 +853,15 @@
                     if (p.answers && p.answers.length > 0) {
                         answersHtml = p.answers.map((a, aIdx) => {
                             const time = a.responseTimeSec || (a.responseTimeMs ? Math.round(a.responseTimeMs/100)/10 : (a.timeMs ? Math.round(a.timeMs/100)/10 : '?'));
-                            return '<div class="log-item ' + (a.isCorrect ? 'correct' : 'wrong') + '">' +
-                                '<span style="min-width:20px;">' + (aIdx + 1) + '.</span>' +
-                                '<span style="flex:1;">' + (a.moduleName || a.module || '') + ' L' + (a.level || '') + '</span>' +
+                            const ts = a.timestamp ? new Date(a.timestamp).toLocaleTimeString('cs-CZ') : '';
+                            const questionShort = (a.questionText || a.question || '').substring(0, 40) + ((a.questionText || a.question || '').length > 40 ? '...' : '');
+                            return '<div class="log-item ' + (a.isCorrect ? 'correct' : 'wrong') + '" style="flex-wrap:wrap;">' +
+                                '<span style="min-width:20px; font-weight:bold;">' + (aIdx + 1) + '.</span>' +
+                                '<span style="color:#888; font-size:10px; min-width:55px;">' + ts + '</span>' +
+                                '<span>' + (a.moduleName || a.module || '') + ' L' + (a.level || '') + '</span>' +
                                 '<span>' + (a.isCorrect ? '✓' : '✗') + '</span>' +
                                 '<span style="color:#666; font-size:11px;">' + time + 's</span>' +
+                                '<div style="width:100%; font-size:10px; color:#555; margin-top:2px; padding-left:20px;">' + questionShort + '</div>' +
                             '</div>';
                         }).join('');
                     } else {
