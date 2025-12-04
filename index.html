@@ -531,6 +531,7 @@
                 <button class="btn" style="flex:1; background:#dbeafe; color:#1d4ed8;" onclick="exportCSV()">📊 Shrnutí</button>
             </div>
             <button class="btn" style="background:#fef3c7; color:#d97706; width:100%;" onclick="exportDetailedCSV()">📋 Detailní CSV (vědecká data)</button>
+            <button class="btn" style="background:#e0e7ff; color:#4f46e5; margin-top:8px;" onclick="showDebugLogs()">🔍 Debug Logy</button>
             <button class="btn" style="background:#fee2e2; color:#dc2626; margin-top:8px;" onclick="clearData()">🗑️ Smazat vše</button>
         </div>
         <div id="participantsList" style="flex:1; overflow-y:auto;"></div>
@@ -544,6 +545,154 @@
     <script src="questions/sw/questions_tomato.js"></script>
 
     <script>
+        // ========== DEBUG LOGGING ==========
+        const DEBUG_LOG_KEY = 'farmlinguo_debug_log';
+        const MAX_LOG_ENTRIES = 200;
+
+        function debugLog(type, message, data = null) {
+            try {
+                const logs = JSON.parse(localStorage.getItem(DEBUG_LOG_KEY) || '[]');
+                const entry = {
+                    time: new Date().toISOString(),
+                    type: type,
+                    msg: message,
+                    data: data,
+                    mem: performance?.memory?.usedJSHeapSize || null,
+                    url: location.href
+                };
+                logs.push(entry);
+                // Keep only last entries
+                if (logs.length > MAX_LOG_ENTRIES) {
+                    logs.splice(0, logs.length - MAX_LOG_ENTRIES);
+                }
+                localStorage.setItem(DEBUG_LOG_KEY, JSON.stringify(logs));
+                console.log(`[${type}]`, message, data || '');
+            } catch (e) {
+                console.error('Debug log failed:', e);
+            }
+        }
+
+        // Log app start
+        debugLog('INIT', 'App starting', {
+            userAgent: navigator.userAgent,
+            standalone: window.navigator.standalone || window.matchMedia('(display-mode: standalone)').matches,
+            online: navigator.onLine
+        });
+
+        // Global error handler
+        window.onerror = function(message, source, lineno, colno, error) {
+            debugLog('ERROR', message, {
+                source: source,
+                line: lineno,
+                col: colno,
+                stack: error?.stack
+            });
+            return false;
+        };
+
+        // Unhandled promise rejection
+        window.addEventListener('unhandledrejection', function(event) {
+            debugLog('PROMISE_ERROR', event.reason?.message || String(event.reason), {
+                stack: event.reason?.stack
+            });
+        });
+
+        // Page visibility change (detect when app goes to background)
+        document.addEventListener('visibilitychange', function() {
+            debugLog('VISIBILITY', document.visibilityState);
+        });
+
+        // Before unload (page closing)
+        window.addEventListener('beforeunload', function() {
+            debugLog('UNLOAD', 'Page unloading');
+        });
+
+        // Pause event (iOS specific)
+        window.addEventListener('pagehide', function(e) {
+            debugLog('PAGEHIDE', 'Page hiding', { persisted: e.persisted });
+        });
+
+        // Memory warning (if available)
+        if ('onmemorywarning' in window) {
+            window.addEventListener('memorywarning', function() {
+                debugLog('MEMORY_WARNING', 'Low memory!');
+            });
+        }
+
+        // Service worker errors
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.addEventListener('error', function(e) {
+                debugLog('SW_ERROR', 'Service worker error', { message: e.message });
+            });
+        }
+
+        // Function to view logs (call from console: viewDebugLogs())
+        window.viewDebugLogs = function() {
+            const logs = JSON.parse(localStorage.getItem(DEBUG_LOG_KEY) || '[]');
+            console.table(logs);
+            return logs;
+        };
+
+        // Function to export logs
+        window.exportDebugLogs = function() {
+            const logs = JSON.parse(localStorage.getItem(DEBUG_LOG_KEY) || '[]');
+            const blob = new Blob([JSON.stringify(logs, null, 2)], { type: 'application/json' });
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = 'farmlinguo_debug_' + new Date().toISOString().split('T')[0] + '.json';
+            a.click();
+            return logs.length + ' entries exported';
+        };
+
+        // Function to clear logs
+        window.clearDebugLogs = function() {
+            localStorage.removeItem(DEBUG_LOG_KEY);
+            console.log('Debug logs cleared');
+        };
+
+        // Function to show logs in UI
+        function showDebugLogs() {
+            const logs = JSON.parse(localStorage.getItem(DEBUG_LOG_KEY) || '[]');
+            const container = document.getElementById('participantsList');
+
+            if (logs.length === 0) {
+                container.innerHTML = '<p style="text-align:center; color:#888; padding:32px;">Žádné debug logy</p>';
+            } else {
+                const typeColors = {
+                    'INIT': '#10b981',
+                    'SCREEN': '#3b82f6',
+                    'ACTION': '#8b5cf6',
+                    'ERROR': '#ef4444',
+                    'PROMISE_ERROR': '#ef4444',
+                    'VISIBILITY': '#f59e0b',
+                    'UNLOAD': '#f97316',
+                    'PAGEHIDE': '#f97316',
+                    'SW_ERROR': '#dc2626',
+                    'MEMORY_WARNING': '#dc2626'
+                };
+
+                container.innerHTML =
+                    '<div style="padding:8px 16px; display:flex; gap:8px;">' +
+                        '<button class="btn" style="flex:1; background:#fee2e2; color:#dc2626; padding:10px;" onclick="clearDebugLogs(); showDebugLogs();">🗑️ Vymazat logy</button>' +
+                        '<button class="btn" style="flex:1; background:#dbeafe; color:#1d4ed8; padding:10px;" onclick="exportDebugLogs();">📥 Export</button>' +
+                    '</div>' +
+                    '<div style="padding:0 16px; font-size:12px; color:#888;">Posledních ' + logs.length + ' záznamů (nejnovější nahoře)</div>' +
+                    logs.slice().reverse().map(log => {
+                        const time = new Date(log.time).toLocaleTimeString('cs-CZ');
+                        const color = typeColors[log.type] || '#666';
+                        const dataStr = log.data ? JSON.stringify(log.data).substring(0, 100) : '';
+                        return '<div style="margin:4px 16px; padding:8px; background:white; border-radius:8px; border-left:3px solid ' + color + ';">' +
+                            '<div style="display:flex; justify-content:space-between; align-items:center;">' +
+                                '<span style="font-weight:bold; color:' + color + ';">' + log.type + '</span>' +
+                                '<span style="font-size:11px; color:#888;">' + time + '</span>' +
+                            '</div>' +
+                            '<div style="font-size:13px; margin-top:4px;">' + log.msg + '</div>' +
+                            (dataStr ? '<div style="font-size:11px; color:#666; margin-top:2px; word-break:break-all;">' + dataStr + '</div>' : '') +
+                        '</div>';
+                    }).join('');
+            }
+        }
+
         // ========== STATE ==========
         let userName = '';
         let sessionStart = null;
@@ -584,6 +733,7 @@
 
         // ========== HELPERS ==========
         function showScreen(id) {
+            debugLog('SCREEN', 'Switching to: ' + id);
             document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
             document.getElementById(id).classList.add('active');
         }
@@ -720,6 +870,7 @@
 
         // ========== START TEST ==========
         function startTest() {
+            debugLog('ACTION', 'startTest called');
             userName = document.getElementById('nameInput').value.trim();
             const nameError = document.getElementById('nameError');
             const nameInput = document.getElementById('nameInput');
@@ -764,6 +915,7 @@
 
         // ========== MODULE ==========
         function loadLevel() {
+            debugLog('ACTION', 'loadLevel', { module: currentModule, level: currentLevel });
             const moduleData = {
                 'beans': window.beansQuestions,
                 'cashew': window.cashewQuestions,
@@ -834,6 +986,7 @@
         }
 
         function selectAnswer(index) {
+            debugLog('ACTION', 'selectAnswer', { index: index, questionIndex: questionIndex });
             const q = questions[questionIndex];
             const selectedOpt = shuffledOptions[index];
             const isCorrect = selectedOpt.isCorrect;
@@ -1008,6 +1161,7 @@
         }
 
         function saveProgress() {
+            debugLog('ACTION', 'saveProgress', { answersCount: answers.length });
             if (answers.length === 0) return;
 
             const duration = Math.floor((Date.now() - sessionStart) / 1000);
