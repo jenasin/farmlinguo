@@ -1,14 +1,14 @@
-const CACHE_NAME = 'farmlinguo-v15';
+const CACHE_NAME = 'farmlinguo-v16';
 const ASSETS = [
-    '/',
-    '/index.html',
-    '/manifest.json',
-    '/icon.svg',
-    '/questions/sw/questions_beans.js',
-    '/questions/sw/questions_cashew.js',
-    '/questions/sw/questions_drought.js',
-    '/questions/sw/questions_maize.js',
-    '/questions/sw/questions_tomato.js'
+    './',
+    './index.html',
+    './manifest.json',
+    './icon.svg',
+    './questions/sw/questions_beans.js',
+    './questions/sw/questions_cashew.js',
+    './questions/sw/questions_drought.js',
+    './questions/sw/questions_maize.js',
+    './questions/sw/questions_tomato.js'
 ];
 
 // Install event - cache assets
@@ -66,8 +66,8 @@ self.addEventListener('fetch', (event) => {
                     })
                     .catch(() => {
                         // Offline fallback for HTML
-                        if (event.request.headers.get('accept').includes('text/html')) {
-                            return caches.match('/index.html');
+                        if (event.request.headers.get('accept') && event.request.headers.get('accept').includes('text/html')) {
+                            return caches.match('./index.html');
                         }
                     });
             })
