@@ -38,31 +38,40 @@
             border-bottom-width: 0;
         }
 
-        /* Answer buttons - Duolingo style */
+        /* Answer buttons - Duolingo flat style */
         .btn-answer {
+            width: 100%;
+            padding: 18px 20px;
             background: white;
-            border: 2px solid #e5e7eb;
-            border-bottom: 4px solid #d1d5db;
-            text-align: left;
+            border: none;
+            border-radius: 20px;
+            font-size: 18px;
+            font-weight: 700;
             display: flex;
             align-items: center;
-            gap: 12px;
+            gap: 14px;
+            color: #333;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+            margin-bottom: 12px;
             text-transform: none;
+            transition: transform 0.05s ease, box-shadow 0.1s ease, background 0.2s;
         }
-        .btn-answer:hover { background: #f9fafb; border-color: #cbd5e1; }
+        .btn-answer:hover {
+            background: #f8fafc;
+            box-shadow: 0 3px 8px rgba(0,0,0,0.1);
+        }
         .btn-answer:active {
-            transform: translateY(2px);
-            border-bottom-width: 2px;
+            transform: scale(0.98);
         }
         .btn-answer.correct {
-            background: #d7ffb8;
-            border-color: #58cc02;
-            border-bottom-color: #58a700;
+            background: #e7ffdd !important;
+            box-shadow: 0 0 0 2px #6ed94a inset;
+            color: #246b1d;
         }
         .btn-answer.wrong {
-            background: #ffdfe0;
-            border-color: #ff4b4b;
-            border-bottom-color: #ea2b2b;
+            background: #ffe4e4 !important;
+            box-shadow: 0 0 0 2px #ff6b6b inset;
+            color: #a82424;
         }
 
         /* Module buttons - 3D style */
@@ -93,19 +102,42 @@
         }
 
         .header { background: #58cc02; color: white; padding: 16px; }
-        .card { background: white; border-radius: 16px; padding: 24px; margin: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); border: 2px solid #e5e7eb; }
+
+        /* Duolingo-style cards */
+        .card {
+            background: white;
+            border-radius: 24px;
+            padding: 24px;
+            margin: 16px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+            border: none;
+        }
+        .question-card {
+            background: white;
+            border-radius: 24px;
+            padding: 20px 24px;
+            margin: 16px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+        }
+        .question-card h2 {
+            font-size: 22px;
+            color: #1a1a1a;
+            line-height: 1.4;
+        }
+
         input[type="text"] {
             width: 100%;
-            padding: 16px;
+            padding: 16px 20px;
             font-size: 18px;
-            border: 2px solid #e5e7eb;
-            border-radius: 12px;
-            border-bottom: 4px solid #d1d5db;
+            border: none;
+            border-radius: 16px;
+            background: #f7f7f7;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.04) inset;
         }
         input[type="text"]:focus {
             outline: none;
-            border-color: #58cc02;
-            border-bottom-color: #58a700;
+            background: #fff;
+            box-shadow: 0 0 0 3px rgba(88,204,2,0.3);
         }
         .timer { font-size: 32px; font-weight: bold; font-family: 'Courier New', monospace; }
         .progress { height: 10px; background: #e5e7eb; border-radius: 5px; overflow: hidden; }
@@ -201,14 +233,14 @@
                 <div class="progress-bar" id="questionProgress" style="width:20%"></div>
             </div>
         </div>
-        <div style="flex:1; padding:16px; overflow-y:auto;">
-            <div class="card">
-                <div style="display:flex; gap:12px; align-items:flex-start;">
-                    <span id="questionIcon" style="font-size:32px;">🫘</span>
-                    <h2 id="questionText" style="font-size:20px; color:#333; flex:1;"></h2>
+        <div style="flex:1; padding:0 16px; overflow-y:auto; padding-bottom:120px;">
+            <div class="question-card">
+                <div style="display:flex; gap:14px; align-items:flex-start;">
+                    <span id="questionIcon" style="font-size:36px;">🫘</span>
+                    <h2 id="questionText" style="flex:1;"></h2>
                 </div>
             </div>
-            <div id="answersContainer" style="padding:0 16px;"></div>
+            <div id="answersContainer" style="padding:0 8px;"></div>
         </div>
         </div>
 
