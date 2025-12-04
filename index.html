@@ -199,16 +199,19 @@
         </div>
         </div>
 
+    <!-- FEEDBACK OVERLAY -->
+    <div id="feedbackOverlay" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.3); z-index:998;" onclick="nextQuestion()"></div>
+
     <!-- FEEDBACK POPUP (fixed bottom) -->
-    <div id="feedbackPanel" style="display:none; position:fixed; bottom:0; left:0; right:0; padding:20px; border-radius:20px 20px 0 0; box-shadow:0 -4px 20px rgba(0,0,0,0.2); z-index:100;">
-        <div style="display:flex; gap:12px; align-items:flex-start; margin-bottom:16px;">
-            <span id="feedbackIcon" style="font-size:40px;">🎉</span>
+    <div id="feedbackPanel" style="display:none; position:fixed; bottom:0; left:0; right:0; padding:20px; padding-bottom:max(20px, env(safe-area-inset-bottom)); border-radius:20px 20px 0 0; box-shadow:0 -4px 20px rgba(0,0,0,0.3); z-index:999; background:white;">
+        <div style="display:flex; gap:12px; align-items:center; margin-bottom:16px;">
+            <span id="feedbackIcon" style="font-size:48px;">🎉</span>
             <div style="flex:1;">
-                <div id="feedbackTitle" style="font-size:20px; font-weight:bold;"></div>
-                <div id="feedbackText" style="color:#666; margin-top:4px; font-size:14px;"></div>
+                <div id="feedbackTitle" style="font-size:22px; font-weight:bold;"></div>
+                <div id="feedbackText" style="color:#666; margin-top:4px; font-size:14px; max-height:60px; overflow-y:auto;"></div>
             </div>
         </div>
-        <button id="continueBtn" class="btn btn-green" onclick="nextQuestion()">→ Endelea</button>
+        <button id="continueBtn" class="btn btn-green" onclick="nextQuestion()" style="font-size:20px; padding:18px;">→ ENDELEA</button>
     </div>
 
     <!-- RESULTS SCREEN -->
@@ -507,6 +510,9 @@
             const q = questions[questionIndex];
             document.getElementById('questionText').textContent = q.question;
             document.getElementById('questionProgress').style.width = ((questionIndex + 1) / questions.length * 100) + '%';
+
+            // Hide feedback overlay and panel
+            document.getElementById('feedbackOverlay').style.display = 'none';
             document.getElementById('feedbackPanel').style.display = 'none';
 
             const container = document.getElementById('answersContainer');
@@ -583,14 +589,19 @@
                 else if (i === index) btn.classList.add('wrong');
             });
 
+            // Show overlay and panel
+            document.getElementById('feedbackOverlay').style.display = 'block';
             const panel = document.getElementById('feedbackPanel');
             panel.style.display = 'block';
-            panel.style.background = isCorrect ? '#dcfce7' : '#fee2e2';
+            panel.style.background = isCorrect ? '#d7ffb8' : '#ffdfe0';
             document.getElementById('feedbackIcon').textContent = isCorrect ? '🎉' : '😢';
             document.getElementById('feedbackTitle').textContent = isCorrect ? 'Vizuri sana!' : 'Si sawa kabisa';
-            document.getElementById('feedbackTitle').style.color = isCorrect ? '#16a34a' : '#dc2626';
+            document.getElementById('feedbackTitle').style.color = isCorrect ? '#58cc02' : '#ff4b4b';
             document.getElementById('feedbackText').textContent = q.explanation || '';
-            document.getElementById('continueBtn').style.background = isCorrect ? '#16a34a' : '#dc2626';
+
+            const continueBtn = document.getElementById('continueBtn');
+            continueBtn.style.background = isCorrect ? '#58cc02' : '#ff4b4b';
+            continueBtn.style.borderBottomColor = isCorrect ? '#58a700' : '#ea2b2b';
         }
 
         function nextQuestion() {
@@ -604,6 +615,10 @@
         }
 
         function showLevelComplete() {
+            // Hide feedback overlay
+            document.getElementById('feedbackOverlay').style.display = 'none';
+            document.getElementById('feedbackPanel').style.display = 'none';
+
             const percent = Math.round(levelCorrect / levelTotal * 100);
             const passed = percent >= PASS_THRESHOLD;
             const needed = Math.ceil(levelTotal * PASS_THRESHOLD / 100);
@@ -614,7 +629,7 @@
 
             if (passed) {
                 // SUCCESS - green screen
-                header.style.background = '#16a34a';
+                header.style.background = '#58cc02';
                 document.getElementById('levelEmoji').textContent = '🎉';
                 document.getElementById('levelTitle').textContent = 'Hongera! Umefaulu!';
                 document.getElementById('levelMessage').innerHTML =
