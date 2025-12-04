@@ -490,7 +490,7 @@
             <div id="answersLog" style="max-height:200px; overflow-y:auto; background:#f9fafb; border-radius:12px; padding:8px;"></div>
         </div>
         <div style="padding:16px;">
-            <button class="btn btn-green" onclick="location.reload()">🚀 Mtihani Mpya</button>
+            <button class="btn btn-green" onclick="newTest()">🚀 Mtihani Mpya</button>
             <button class="btn" style="background:#dbeafe; color:#1d4ed8;" onclick="showParticipants()">👥 Washiriki Wote</button>
         </div>
     </div>
@@ -660,7 +660,7 @@
         };
 
         // App version - change this on each deploy to auto-clear cache
-        const APP_VERSION = 'v26';
+        const APP_VERSION = 'v27';
 
         // Force refresh - clear SW cache and reload
         function forceRefresh() {
@@ -1284,10 +1284,25 @@
 
         // ========== END TEST ==========
         function endTest() {
-            clearInterval(timerInterval);
+            debugLog('ACTION', 'endTest called');
 
-            // Save final progress
+            // Stop timer
+            if (timerInterval) {
+                clearInterval(timerInterval);
+                timerInterval = null;
+            }
+
+            // Hide any open overlays
+            document.getElementById('feedbackOverlay').style.display = 'none';
+            document.getElementById('feedbackPanel').style.display = 'none';
+
+            // Save final progress with all data
             saveProgress();
+            debugLog('ACTION', 'Final progress saved', {
+                user: userName,
+                answers: answers.length,
+                correct: totalCorrect
+            });
 
             const accuracy = answers.length > 0 ? Math.round(totalCorrect / answers.length * 100) : 0;
             const avgTime = answers.length > 0 ? Math.round(answers.reduce((a, b) => a + (b.responseTimeMs || b.timeMs || 0), 0) / answers.length / 1000 * 10) / 10 : 0;
@@ -1306,6 +1321,52 @@
             renderAnswersLog();
 
             showScreen('resultsScreen');
+        }
+
+        // Start new test with new student
+        function newTest() {
+            debugLog('ACTION', 'newTest called');
+
+            // Stop any running timer
+            if (timerInterval) {
+                clearInterval(timerInterval);
+                timerInterval = null;
+            }
+
+            // Reset all state variables
+            userName = '';
+            sessionStart = null;
+            currentModule = null;
+            currentLevel = 1;
+            currentLevelIndex = 0;
+            questions = [];
+            questionIndex = 0;
+            questionStart = null;
+            answers = [];
+            totalCorrect = 0;
+            levelCorrect = 0;
+            levelTotal = 0;
+            unlockedIndex = 0;
+            window.currentUserId = null;
+
+            // Hide overlays
+            document.getElementById('feedbackOverlay').style.display = 'none';
+            document.getElementById('feedbackPanel').style.display = 'none';
+
+            // Reset UI
+            document.getElementById('nameInput').value = '';
+            document.getElementById('nameError').style.display = 'none';
+            document.getElementById('nameInput').style.borderColor = '';
+            document.getElementById('timerDisplay').textContent = '5:00';
+            document.getElementById('answeredCount').textContent = '0';
+
+            // Update participant count
+            updateParticipantCount();
+
+            // Show start screen
+            showScreen('startScreen');
+
+            debugLog('ACTION', 'Ready for new student');
         }
 
         function renderAnswersLog() {
