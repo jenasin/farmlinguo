@@ -8,7 +8,13 @@
     <meta name="theme-color" content="#16a34a">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Nunito', 'Segoe UI', Tahoma, sans-serif; }
-        input[type="text"] { -webkit-user-select: text !important; user-select: text !important; }
+        input, textarea {
+            touch-action: manipulation !important;
+            -webkit-user-select: text !important;
+            user-select: text !important;
+            pointer-events: auto !important;
+            -webkit-appearance: none;
+        }
         body { background: linear-gradient(to bottom, #f0fdf4, #dcfce7); min-height: 100vh; }
         .screen { display: none; min-height: 100vh; }
         .screen.active { display: flex; flex-direction: column; }
@@ -677,7 +683,7 @@
         };
 
         // App version - change this on each deploy to auto-clear cache
-        const APP_VERSION = 'v29';
+        const APP_VERSION = 'v30';
 
         // Force refresh - clear SW cache and reload
         function forceRefresh() {
@@ -1604,15 +1610,20 @@
                 // Ensure start screen is visible
                 showScreen('startScreen');
 
-                // Focus on name input
+                // Focus on name input - Android PWA fix
                 const nameInput = document.getElementById('nameInput');
                 if (nameInput) {
                     nameInput.value = '';
-                    // Add touch handler for mobile keyboard
-                    nameInput.addEventListener('touchstart', function() {
+                    // Critical fix for Android PWA keyboard
+                    nameInput.addEventListener('touchend', function(e) {
+                        e.stopPropagation();
                         this.focus();
                     });
-                    debugLog('INIT', 'Name input ready');
+                    nameInput.addEventListener('click', function(e) {
+                        e.stopPropagation();
+                        this.focus();
+                    });
+                    debugLog('INIT', 'Name input ready with PWA fix');
                 } else {
                     debugLog('ERROR', 'Name input not found!');
                 }
