@@ -133,11 +133,14 @@
             </div>
             <div class="card">
                 <label style="font-weight:bold; display:block; margin-bottom:12px;">👤 Jina lako:</label>
-                <input type="text" id="nameInput" placeholder="Andika jina hapa...">
+                <input type="text" id="nameInput" placeholder="Andika jina hapa..." minlength="2" required>
+                <div id="nameError" style="color:#ff4b4b; font-size:14px; margin-top:8px; display:none;">
+                    ⚠️ Tafadhali andika jina lako (angalau herufi 2)
+                </div>
             </div>
             <div style="padding:0 16px;">
-                <button class="btn btn-green" onclick="startTest()">🚀 Anza Mtihani</button>
-                <p style="text-align:center; color:#888; margin-top:12px;">⏱️ Dakika 5 • 📚 Moduli 5</p>
+                <button class="btn btn-green" onclick="startTest()">🚀 ANZA MTIHANI</button>
+                <p style="text-align:center; color:#888; margin-top:12px;">⏱️ Dakika 5 • 📚 Viwango 15</p>
             </div>
             <div style="padding:16px;">
                 <button class="btn" style="background:#dbeafe; color:#1d4ed8;" onclick="showParticipants()">
@@ -160,12 +163,22 @@
                     <div style="font-size:12px; opacity:0.8;">zimebaki</div>
                 </div>
             </div>
-            <div class="progress" style="margin-top:12px;">
-                <div class="progress-bar" id="timeProgress" style="width:0%"></div>
+            <div style="margin-top:12px;">
+                <div style="display:flex; justify-content:space-between; font-size:12px; margin-bottom:4px;">
+                    <span>⏱️ Muda</span>
+                    <span>📊 Maendeleo: <span id="levelProgressText">0/15</span></span>
+                </div>
+                <div class="progress">
+                    <div class="progress-bar" id="timeProgress" style="width:0%"></div>
+                </div>
+                <div class="progress" style="margin-top:6px; background:#fef3c7;">
+                    <div class="progress-bar" id="levelProgress" style="width:0%; background:linear-gradient(90deg, #ffc800, #ff9600);"></div>
+                </div>
             </div>
         </div>
         <div style="flex:1; padding:16px; overflow-y:auto;">
-            <h2 style="text-align:center; margin-bottom:16px; color:#333;">Chagua Kiwango</h2>
+            <h2 style="text-align:center; margin-bottom:8px; color:#333;">Chagua Kiwango</h2>
+            <p style="text-align:center; color:#888; font-size:14px; margin-bottom:16px;">Kamilisha 80% ili kufungua kiwango kifuatacho</p>
             <div id="modulesContainer"></div>
         </div>
         <div style="padding:16px;">
@@ -402,10 +415,15 @@
                 container.appendChild(btn);
             });
 
+            // Update level progress bar
+            const progressPercent = (unlockedIndex / LEVELS.length) * 100;
+            document.getElementById('levelProgress').style.width = progressPercent + '%';
+            document.getElementById('levelProgressText').textContent = unlockedIndex + '/' + LEVELS.length;
+
             // If all completed, show congratulations
             if (unlockedIndex >= LEVELS.length) {
                 const msg = document.createElement('div');
-                msg.style.cssText = 'text-align:center; padding:20px; color:#16a34a; font-size:20px; font-weight:bold;';
+                msg.style.cssText = 'text-align:center; padding:20px; color:#58cc02; font-size:20px; font-weight:bold;';
                 msg.innerHTML = '🎉 Hongera! Umekamilisha viwango vyote!';
                 container.appendChild(msg);
             }
@@ -442,10 +460,17 @@
         // ========== START TEST ==========
         function startTest() {
             userName = document.getElementById('nameInput').value.trim();
-            if (!userName) {
-                alert('Tafadhali andika jina lako!');
+            const nameError = document.getElementById('nameError');
+            const nameInput = document.getElementById('nameInput');
+
+            if (!userName || userName.length < 2) {
+                nameError.style.display = 'block';
+                nameInput.style.borderColor = '#ff4b4b';
+                nameInput.focus();
                 return;
             }
+            nameError.style.display = 'none';
+            nameInput.style.borderColor = '#58cc02';
 
             sessionStart = Date.now();
             answers = [];
@@ -780,25 +805,57 @@
             if (list.length === 0) {
                 container.innerHTML = '<p style="text-align:center; color:#888; padding:32px;">Hakuna washiriki bado</p>';
             } else {
-                container.innerHTML = list.slice().reverse().map(p => {
-                    const mins = Math.floor(p.duration / 60);
-                    const secs = p.duration % 60;
+                container.innerHTML = list.slice().reverse().map((p, idx) => {
+                    const mins = Math.floor((p.duration || 0) / 60);
+                    const secs = (p.duration || 0) % 60;
                     const timeStr = mins + ':' + (secs < 10 ? '0' : '') + secs;
-                    const color = p.accuracy >= 70 ? '#16a34a' : p.accuracy >= 50 ? '#eab308' : '#dc2626';
-                    return '<div class="participant" style="border-left-color:' + color + '">' +
-                        '<div style="flex:1;">' +
-                            '<div style="font-weight:bold;">' + p.name + '</div>' +
-                            '<div style="font-size:12px; color:#888;">' + new Date(p.date).toLocaleDateString() + '</div>' +
-                            '<div style="font-size:13px; margin-top:4px;">✅ ' + p.correct + '/' + p.total + ' • ⏱️ ' + timeStr + '</div>' +
+                    const color = p.accuracy >= 70 ? '#58cc02' : p.accuracy >= 50 ? '#ffc800' : '#ff4b4b';
+                    const pId = 'participant_' + idx;
+
+                    // Create answers detail
+                    let answersHtml = '';
+                    if (p.answers && p.answers.length > 0) {
+                        answersHtml = p.answers.map((a, aIdx) => {
+                            const time = a.responseTimeSec || (a.responseTimeMs ? Math.round(a.responseTimeMs/100)/10 : (a.timeMs ? Math.round(a.timeMs/100)/10 : '?'));
+                            return '<div class="log-item ' + (a.isCorrect ? 'correct' : 'wrong') + '">' +
+                                '<span style="min-width:20px;">' + (aIdx + 1) + '.</span>' +
+                                '<span style="flex:1;">' + (a.moduleName || a.module || '') + ' L' + (a.level || '') + '</span>' +
+                                '<span>' + (a.isCorrect ? '✓' : '✗') + '</span>' +
+                                '<span style="color:#666; font-size:11px;">' + time + 's</span>' +
+                            '</div>';
+                        }).join('');
+                    } else {
+                        answersHtml = '<p style="color:#888; text-align:center; padding:8px;">Hakuna majibu</p>';
+                    }
+
+                    return '<div class="participant" style="border-left-color:' + color + '; cursor:pointer; flex-direction:column; align-items:stretch;" onclick="toggleParticipant(\'' + pId + '\')">' +
+                        '<div style="display:flex; justify-content:space-between; align-items:center;">' +
+                            '<div style="flex:1;">' +
+                                '<div style="font-weight:bold;">' + p.name + ' <span style="font-size:12px; color:#888;">▼</span></div>' +
+                                '<div style="font-size:12px; color:#888;">' + new Date(p.date).toLocaleDateString() + '</div>' +
+                                '<div style="font-size:13px; margin-top:4px;">✅ ' + (p.correct || 0) + '/' + (p.total || 0) + ' • ⏱️ ' + timeStr + '</div>' +
+                            '</div>' +
+                            '<div style="text-align:right;">' +
+                                '<div style="font-size:24px; font-weight:bold; color:' + color + '">' + (p.accuracy || 0) + '%</div>' +
+                            '</div>' +
                         '</div>' +
-                        '<div style="text-align:right;">' +
-                            '<div style="font-size:24px; font-weight:bold; color:' + color + '">' + p.accuracy + '%</div>' +
+                        '<div id="' + pId + '" style="display:none; margin-top:12px; padding-top:12px; border-top:1px solid #e5e7eb; max-height:200px; overflow-y:auto;">' +
+                            answersHtml +
                         '</div>' +
                     '</div>';
                 }).join('');
             }
 
             showScreen('participantsScreen');
+        }
+
+        function toggleParticipant(id) {
+            const el = document.getElementById(id);
+            if (el.style.display === 'none') {
+                el.style.display = 'block';
+            } else {
+                el.style.display = 'none';
+            }
         }
 
         function exportJSON() {
