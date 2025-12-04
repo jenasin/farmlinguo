@@ -183,10 +183,13 @@
                 <div></div>
             </div>
         </div>
-        <div style="padding:16px; display:flex; gap:8px;">
-            <button class="btn" style="flex:1; background:#dcfce7; color:#16a34a;" onclick="exportJSON()">📥 JSON</button>
-            <button class="btn" style="flex:1; background:#dbeafe; color:#1d4ed8;" onclick="exportCSV()">📊 CSV</button>
-            <button class="btn" style="background:#fee2e2; color:#dc2626; padding:18px 16px;" onclick="clearData()">🗑️</button>
+        <div style="padding:16px;">
+            <div style="display:flex; gap:8px; margin-bottom:8px;">
+                <button class="btn" style="flex:1; background:#dcfce7; color:#16a34a;" onclick="exportJSON()">📥 JSON</button>
+                <button class="btn" style="flex:1; background:#dbeafe; color:#1d4ed8;" onclick="exportCSV()">📊 Shrnutí</button>
+            </div>
+            <button class="btn" style="background:#fef3c7; color:#d97706; width:100%;" onclick="exportDetailedCSV()">📋 Detailní CSV (vědecká data)</button>
+            <button class="btn" style="background:#fee2e2; color:#dc2626; margin-top:8px;" onclick="clearData()">🗑️ Smazat vše</button>
         </div>
         <div id="participantsList" style="flex:1; overflow-y:auto;"></div>
     </div>
@@ -437,15 +440,40 @@
             const isCorrect = selectedOpt.isCorrect;
             const responseTime = Date.now() - questionStart;
 
-            // Record answer
+            // Record answer with full scientific data
             answers.push({
+                // Identifikace
+                answerId: answers.length + 1,
+                timestamp: new Date().toISOString(),
+                sessionTimeMs: Date.now() - sessionStart,
+
+                // Modul a level
                 module: currentModule,
+                moduleName: LEVELS[currentLevelIndex].name,
                 level: currentLevel,
-                question: q.question,
-                selected: selectedOpt.text,
-                correct: shuffledOptions.find(o => o.isCorrect).text,
+                levelIndex: currentLevelIndex,
+
+                // Otázka
+                questionIndex: questionIndex + 1,
+                questionTotal: questions.length,
+                questionText: q.question,
+
+                // Odpověď
+                selectedAnswer: selectedOpt.text,
+                selectedIndex: index,
+                correctAnswer: shuffledOptions.find(o => o.isCorrect).text,
+                correctIndex: shuffledOptions.findIndex(o => o.isCorrect),
                 isCorrect: isCorrect,
-                timeMs: responseTime
+
+                // Čas odpovědi
+                responseTimeMs: responseTime,
+                responseTimeSec: Math.round(responseTime / 100) / 10,
+
+                // Všechny možnosti (pro analýzu)
+                allOptions: shuffledOptions.map(o => o.text),
+
+                // Vysvětlení
+                explanation: q.explanation || ''
             });
 
             if (isCorrect) {
@@ -648,14 +676,48 @@
         }
 
         function exportCSV() {
-            let csv = 'Jina,Tarehe,Maswali,Sahihi,Usahihi,Muda\n';
-            getParticipants().forEach(p => {
-                csv += '"' + p.name + '",' + p.date + ',' + p.total + ',' + p.correct + ',' + p.accuracy + '%,' + p.avgTime + 's\n';
+            // Summary CSV
+            let csv = 'participant_id,name,date,total_questions,correct_answers,accuracy_percent,avg_response_time_sec,session_duration_sec,levels_completed\n';
+            getParticipants().forEach((p, idx) => {
+                csv += idx + ',"' + p.name + '",' + p.date + ',' + p.total + ',' + p.correct + ',' + p.accuracy + ',' + p.avgTime + ',' + p.duration + ',' + (p.levelsCompleted || 0) + '\n';
             });
             const blob = new Blob([csv], { type: 'text/csv' });
             const a = document.createElement('a');
             a.href = URL.createObjectURL(blob);
-            a.download = 'farmlinguo_' + new Date().toISOString().split('T')[0] + '.csv';
+            a.download = 'farmlinguo_summary_' + new Date().toISOString().split('T')[0] + '.csv';
+            a.click();
+        }
+
+        function exportDetailedCSV() {
+            // Detailed CSV with all answers for scientific analysis
+            let csv = 'participant_id,participant_name,answer_id,timestamp,session_time_ms,module,module_name,level,question_index,question_total,question_text,selected_answer,correct_answer,is_correct,response_time_ms,response_time_sec\n';
+
+            getParticipants().forEach((p, pIdx) => {
+                if (p.answers && p.answers.length > 0) {
+                    p.answers.forEach(a => {
+                        csv += pIdx + ',"' + p.name + '",' +
+                            (a.answerId || '') + ',' +
+                            (a.timestamp || '') + ',' +
+                            (a.sessionTimeMs || '') + ',' +
+                            (a.module || '') + ',' +
+                            '"' + (a.moduleName || '') + '",' +
+                            (a.level || '') + ',' +
+                            (a.questionIndex || '') + ',' +
+                            (a.questionTotal || '') + ',' +
+                            '"' + (a.questionText || a.question || '').replace(/"/g, '""') + '",' +
+                            '"' + (a.selectedAnswer || a.selected || '').replace(/"/g, '""') + '",' +
+                            '"' + (a.correctAnswer || a.correct || '').replace(/"/g, '""') + '",' +
+                            (a.isCorrect ? 1 : 0) + ',' +
+                            (a.responseTimeMs || a.timeMs || '') + ',' +
+                            (a.responseTimeSec || (a.timeMs ? Math.round(a.timeMs/100)/10 : '')) + '\n';
+                    });
+                }
+            });
+
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = 'farmlinguo_detailed_' + new Date().toISOString().split('T')[0] + '.csv';
             a.click();
         }
 
