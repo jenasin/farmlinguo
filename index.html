@@ -361,7 +361,7 @@
             </div>
             <div class="card">
                 <label style="font-weight:bold; display:block; margin-bottom:12px;">👤 Jina lako:</label>
-                <input type="text" id="nameInput" placeholder="Andika jina hapa..." minlength="2" required>
+                <input type="text" id="nameInput" placeholder="Andika jina hapa..." minlength="2" required inputmode="text" autocomplete="name" autocapitalize="words" onclick="this.focus()">
                 <div id="nameError" style="color:#ff4b4b; font-size:14px; margin-top:8px; display:none;">
                     ⚠️ Tafadhali andika jina lako (angalau herufi 2)
                 </div>
@@ -376,6 +376,9 @@
                 </button>
                 <button class="btn" style="background:#f3e8ff; color:#7c3aed; margin-top:8px;" onclick="showParticipants(); setTimeout(showDebugLogs, 100);">
                     🔍 Debug Logy
+                </button>
+                <button class="btn" style="background:#fef3c7; color:#d97706; margin-top:8px; font-size:12px; padding:10px;" onclick="forceRefresh()">
+                    🔄 Force Refresh (pokud nefunguje)
                 </button>
             </div>
         </div>
@@ -652,6 +655,27 @@
             localStorage.removeItem(DEBUG_LOG_KEY);
             console.log('Debug logs cleared');
         };
+
+        // Force refresh - clear SW cache and reload
+        function forceRefresh() {
+            debugLog('ACTION', 'Force refresh requested');
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.getRegistrations().then(function(registrations) {
+                    for (let registration of registrations) {
+                        registration.unregister();
+                    }
+                });
+                caches.keys().then(function(names) {
+                    for (let name of names) {
+                        caches.delete(name);
+                    }
+                }).then(function() {
+                    window.location.reload(true);
+                });
+            } else {
+                window.location.reload(true);
+            }
+        }
 
         // Function to show logs in UI
         function showDebugLogs() {
