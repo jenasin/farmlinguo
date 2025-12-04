@@ -581,6 +581,10 @@
             }
             document.getElementById('answeredCount').textContent = answers.length;
 
+            // SAVE AFTER EVERY ANSWER - for research data integrity
+            saveProgress();
+            console.log('📊 Answer logged:', answers[answers.length - 1]);
+
             // Show feedback
             const btns = document.querySelectorAll('#answersContainer .btn-answer');
             btns.forEach((btn, i) => {
