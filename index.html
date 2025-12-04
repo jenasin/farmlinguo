@@ -8,6 +8,7 @@
     <meta name="theme-color" content="#16a34a">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Nunito', 'Segoe UI', Tahoma, sans-serif; }
+        input[type="text"] { -webkit-user-select: text !important; user-select: text !important; }
         body { background: linear-gradient(to bottom, #f0fdf4, #dcfce7); min-height: 100vh; }
         .screen { display: none; min-height: 100vh; }
         .screen.active { display: flex; flex-direction: column; }
@@ -377,7 +378,7 @@
             </div>
             <div class="card">
                 <label style="font-weight:bold; display:block; margin-bottom:12px;">👤 Jina lako:</label>
-                <input type="text" id="nameInput" placeholder="Andika jina hapa..." minlength="2" required inputmode="text" autocomplete="name" autocapitalize="words" onclick="this.focus()">
+                <input type="text" id="nameInput" placeholder="Andika jina hapa..." minlength="2" required inputmode="text" autocomplete="off" autocapitalize="words" style="-webkit-user-select: text; user-select: text;">
                 <div id="nameError" style="color:#ff4b4b; font-size:14px; margin-top:8px; display:none;">
                     ⚠️ Tafadhali andika jina lako (angalau herufi 2)
                 </div>
@@ -676,35 +677,25 @@
         };
 
         // App version - change this on each deploy to auto-clear cache
-        const APP_VERSION = 'v28';
+        const APP_VERSION = 'v29';
 
         // Force refresh - clear SW cache and reload
         function forceRefresh() {
             debugLog('ACTION', 'Force refresh requested');
-            if ('serviceWorker' in navigator) {
-                navigator.serviceWorker.getRegistrations().then(function(registrations) {
-                    for (let registration of registrations) {
-                        registration.unregister();
-                    }
-                });
-                caches.keys().then(function(names) {
-                    for (let name of names) {
-                        caches.delete(name);
-                    }
-                }).then(function() {
-                    window.location.reload(true);
-                });
-            } else {
-                window.location.reload(true);
-            }
+            // Simple reload
+            window.location.href = window.location.href.split('?')[0] + '?v=' + Date.now();
         }
 
-        // Reset all data and reload
+        // Reset all data (but just reload, don't clear everything)
         function resetAll() {
             if (confirm('Delete all data and reset app?')) {
                 debugLog('ACTION', 'Reset all requested');
+                // Keep version to avoid infinite loop
+                const version = localStorage.getItem('farmlinguo_version');
                 localStorage.clear();
-                forceRefresh();
+                if (version) localStorage.setItem('farmlinguo_version', version);
+                // Simple reload
+                window.location.href = window.location.href.split('?')[0] + '?reset=' + Date.now();
             }
         }
 
