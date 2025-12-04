@@ -149,6 +149,31 @@
         </div>
     </div>
 
+    <!-- LEVEL COMPLETE SCREEN -->
+    <div id="levelCompleteScreen" class="screen">
+        <div id="levelCompleteHeader" style="padding:32px; text-align:center; color:white;">
+            <div id="levelEmoji" style="font-size:64px;">🎉</div>
+            <div id="levelTitle" style="font-size:24px; font-weight:bold; margin:12px 0;">Kiwango Kimekamilika!</div>
+            <div id="levelPercent" style="font-size:48px; font-weight:bold;">0%</div>
+            <div id="levelScore">0/5 sahihi</div>
+        </div>
+        <div style="flex:1; padding:16px;">
+            <div id="levelMessage" style="text-align:center; padding:20px; background:white; border-radius:16px; margin-bottom:16px;">
+            </div>
+        </div>
+        <div style="padding:16px;">
+            <button id="continueBtn2" class="btn btn-green" style="display:none;" onclick="continueToNext()">
+                ➡️ Endelea Kiwango Kifuatacho
+            </button>
+            <button id="repeatBtn" class="btn" style="background:#fef3c7; color:#d97706;" onclick="repeatLevel()">
+                🔄 Rudia Kiwango Hiki
+            </button>
+            <button class="btn" style="background:#e5e7eb; color:#666; margin-top:8px;" onclick="renderModules(); showScreen('modulesScreen')">
+                📋 Rudi kwenye Orodha
+            </button>
+        </div>
+    </div>
+
     <!-- PARTICIPANTS SCREEN -->
     <div id="participantsScreen" class="screen">
         <div class="header">
@@ -180,12 +205,16 @@
         let timerInterval = null;
         let currentModule = null;
         let currentLevel = 1;
+        let currentLevelIndex = 0;
         let questions = [];
         let questionIndex = 0;
         let questionStart = null;
         let answers = [];
         let totalCorrect = 0;
+        let levelCorrect = 0; // Correct answers in current level
+        let levelTotal = 0;   // Total questions in current level
         const SESSION_DURATION = 5 * 60;
+        const PASS_THRESHOLD = 80; // 80% required to unlock next level
 
         // Progress tracking - which levels are unlocked
         let unlockedIndex = 0; // Index into LEVELS array
@@ -287,6 +316,9 @@
             const lvl = LEVELS[idx];
             currentModule = lvl.module;
             currentLevel = lvl.level;
+            currentLevelIndex = idx;
+            levelCorrect = 0;
+            levelTotal = 0;
             loadLevel();
         }
 
@@ -353,6 +385,7 @@
                 return;
             }
 
+            levelTotal = questions.length;
             questionIndex = 0;
             document.getElementById('moduleIcon').textContent = icons[currentModule];
             document.getElementById('questionIcon').textContent = icons[currentModule];
@@ -415,7 +448,10 @@
                 timeMs: responseTime
             });
 
-            if (isCorrect) totalCorrect++;
+            if (isCorrect) {
+                totalCorrect++;
+                levelCorrect++;
+            }
             document.getElementById('answeredCount').textContent = answers.length;
 
             // Show feedback
@@ -439,19 +475,74 @@
         function nextQuestion() {
             questionIndex++;
             if (questionIndex >= questions.length) {
-                // Level complete - unlock next level
-                // Find current level index and unlock next
-                const currentIdx = LEVELS.findIndex(l => l.module === currentModule && l.level === currentLevel);
-                if (currentIdx >= unlockedIndex) {
-                    unlockedIndex = currentIdx + 1; // Unlock next level
-                }
-
-                // Go back to modules screen to show progress
-                renderModules();
-                showScreen('modulesScreen');
+                // Level complete - show results
+                showLevelComplete();
             } else {
                 showQuestion();
             }
+        }
+
+        function showLevelComplete() {
+            const percent = Math.round(levelCorrect / levelTotal * 100);
+            const passed = percent >= PASS_THRESHOLD;
+            const needed = Math.ceil(levelTotal * PASS_THRESHOLD / 100);
+            const missing = needed - levelCorrect;
+
+            const lvl = LEVELS[currentLevelIndex];
+            const header = document.getElementById('levelCompleteHeader');
+
+            if (passed) {
+                // SUCCESS - green screen
+                header.style.background = '#16a34a';
+                document.getElementById('levelEmoji').textContent = '🎉';
+                document.getElementById('levelTitle').textContent = 'Hongera! Umefaulu!';
+                document.getElementById('levelMessage').innerHTML =
+                    '<div style="color:#16a34a; font-size:18px; font-weight:bold;">✓ Umepita kiwango hiki!</div>' +
+                    '<div style="color:#666; margin-top:8px;">Kiwango kifuatacho kimefunguliwa.</div>';
+
+                // Unlock next level
+                if (currentLevelIndex >= unlockedIndex) {
+                    unlockedIndex = currentLevelIndex + 1;
+                }
+
+                // Show continue button
+                document.getElementById('continueBtn2').style.display = 'block';
+                document.getElementById('repeatBtn').style.display = 'none';
+            } else {
+                // FAIL - orange/red screen
+                header.style.background = '#dc2626';
+                document.getElementById('levelEmoji').textContent = '😢';
+                document.getElementById('levelTitle').textContent = 'Hukufaulu';
+                document.getElementById('levelMessage').innerHTML =
+                    '<div style="color:#dc2626; font-size:18px; font-weight:bold;">✗ Unahitaji ' + PASS_THRESHOLD + '% kufungua kiwango kifuatacho</div>' +
+                    '<div style="color:#666; margin-top:8px;">Ulikuwa na ' + levelCorrect + '/' + levelTotal + '. Ulihitaji angalau ' + needed + ' sahihi.</div>' +
+                    '<div style="color:#666; margin-top:4px;">Maswali ' + missing + ' zaidi sahihi yangehitajika.</div>';
+
+                // Hide continue, show repeat
+                document.getElementById('continueBtn2').style.display = 'none';
+                document.getElementById('repeatBtn').style.display = 'block';
+            }
+
+            document.getElementById('levelPercent').textContent = percent + '%';
+            document.getElementById('levelScore').textContent = levelCorrect + '/' + levelTotal + ' sahihi';
+
+            showScreen('levelCompleteScreen');
+        }
+
+        function continueToNext() {
+            // Go to next level
+            if (currentLevelIndex + 1 < LEVELS.length) {
+                startLevel(currentLevelIndex + 1);
+            } else {
+                // All levels done
+                renderModules();
+                showScreen('modulesScreen');
+            }
+        }
+
+        function repeatLevel() {
+            // Repeat current level
+            startLevel(currentLevelIndex);
         }
 
         // ========== END TEST ==========
