@@ -193,6 +193,14 @@
             background: #f7f7f7;
             box-shadow: 0 2px 4px rgba(0,0,0,0.04) inset;
         }
+        #nameInput {
+            pointer-events: auto !important;
+            touch-action: manipulation !important;
+            -webkit-user-select: text !important;
+            user-select: text !important;
+            z-index: 9999 !important;
+            position: relative;
+        }
         input[type="text"]:focus {
             outline: none;
             background: #fff;
@@ -383,7 +391,7 @@
                 <p style="color:#666;">Jifunze Kilimo kwa Kiswahili</p>
             </div>
             <div class="card">
-                <label style="font-weight:bold; display:block; margin-bottom:12px;">👤 Jina lako:</label>
+                <div style="font-weight:bold; margin-bottom:12px;">👤 Jina lako:</div>
                 <input type="text" id="nameInput" placeholder="Andika jina hapa..." minlength="2" required inputmode="text" autocomplete="off" autocapitalize="words" style="-webkit-user-select: text; user-select: text;">
                 <div id="nameError" style="color:#ff4b4b; font-size:14px; margin-top:8px; display:none;">
                     ⚠️ Tafadhali andika jina lako (angalau herufi 2)
@@ -683,7 +691,7 @@
         };
 
         // App version - change this on each deploy to auto-clear cache
-        const APP_VERSION = 'v30';
+        const APP_VERSION = 'v31';
 
         // Force refresh - clear SW cache and reload
         function forceRefresh() {
@@ -1614,14 +1622,22 @@
                 const nameInput = document.getElementById('nameInput');
                 if (nameInput) {
                     nameInput.value = '';
-                    // Critical fix for Android PWA keyboard
+                    // Critical fix for Android PWA keyboard (Xiaomi fullscreen PWA)
                     nameInput.addEventListener('touchend', function(e) {
                         e.stopPropagation();
-                        this.focus();
+                        e.preventDefault();
+                        const input = this;
+                        setTimeout(function() {
+                            input.focus();
+                        }, 30);
                     });
                     nameInput.addEventListener('click', function(e) {
                         e.stopPropagation();
-                        this.focus();
+                        e.preventDefault();
+                        const input = this;
+                        setTimeout(function() {
+                            input.focus();
+                        }, 30);
                     });
                     debugLog('INIT', 'Name input ready with PWA fix');
                 } else {
