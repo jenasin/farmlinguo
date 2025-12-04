@@ -305,6 +305,17 @@
         }
 
         // ========== QUIZ ==========
+        let shuffledOptions = [];
+
+        function shuffleArray(arr) {
+            const shuffled = [...arr];
+            for (let i = shuffled.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+            }
+            return shuffled;
+        }
+
         function showQuestion() {
             const q = questions[questionIndex];
             document.getElementById('questionText').textContent = q.question;
@@ -314,7 +325,10 @@
             const container = document.getElementById('answersContainer');
             container.innerHTML = '';
 
-            q.options.forEach((opt, i) => {
+            // Shuffle options so correct answer isn't always first
+            shuffledOptions = shuffleArray(q.options);
+
+            shuffledOptions.forEach((opt, i) => {
                 const btn = document.createElement('button');
                 btn.className = 'btn btn-answer';
                 btn.innerHTML = (opt.icon ? '<span style="font-size:24px;">' + opt.icon + '</span>' : '') +
@@ -328,7 +342,8 @@
 
         function selectAnswer(index) {
             const q = questions[questionIndex];
-            const isCorrect = q.options[index].isCorrect;
+            const selectedOpt = shuffledOptions[index];
+            const isCorrect = selectedOpt.isCorrect;
             const responseTime = Date.now() - questionStart;
 
             // Record answer
@@ -336,8 +351,8 @@
                 module: currentModule,
                 level: currentLevel,
                 question: q.question,
-                selected: q.options[index].text,
-                correct: q.options.find(o => o.isCorrect).text,
+                selected: selectedOpt.text,
+                correct: shuffledOptions.find(o => o.isCorrect).text,
                 isCorrect: isCorrect,
                 timeMs: responseTime
             });
@@ -349,7 +364,7 @@
             const btns = document.querySelectorAll('#answersContainer .btn-answer');
             btns.forEach((btn, i) => {
                 btn.disabled = true;
-                if (q.options[i].isCorrect) btn.classList.add('correct');
+                if (shuffledOptions[i].isCorrect) btn.classList.add('correct');
                 else if (i === index) btn.classList.add('wrong');
             });
 
