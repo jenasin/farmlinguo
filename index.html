@@ -115,8 +115,17 @@
         }
         .level-btn:hover { filter: brightness(1.05); }
         .level-btn:active {
-            transform: translateY(6px);
+            transform: translateY(6px) scale(0.98);
             border-bottom-width: 0 !important;
+            filter: brightness(0.95);
+        }
+        @keyframes btnPress {
+            0% { transform: translateY(0) scale(1); }
+            50% { transform: translateY(6px) scale(0.97); }
+            100% { transform: translateY(0) scale(1); }
+        }
+        .level-btn.pressed {
+            animation: btnPress 0.15s ease-out;
         }
 
         /* Unlocked - colorful */
@@ -476,7 +485,13 @@
                 `;
 
                 if (lvl.status !== 'locked') {
-                    btn.onclick = () => startLevel(idx);
+                    btn.onclick = () => {
+                        btn.classList.add('pressed');
+                        setTimeout(() => {
+                            btn.classList.remove('pressed');
+                            startLevel(idx);
+                        }, 150);
+                    };
                 }
 
                 container.appendChild(btn);
@@ -544,6 +559,16 @@
             }
         }
 
+        // ========== UNIQUE ID ==========
+        function generateUniqueId() {
+            return 'u' + Date.now().toString(36) + Math.random().toString(36).substr(2, 5);
+        }
+
+        function isNameTaken(name) {
+            const participants = getParticipants();
+            return participants.some(p => p.name.toLowerCase() === name.toLowerCase());
+        }
+
         // ========== START TEST ==========
         function startTest() {
             userName = document.getElementById('nameInput').value.trim();
@@ -551,13 +576,27 @@
             const nameInput = document.getElementById('nameInput');
 
             if (!userName || userName.length < 2) {
+                nameError.textContent = '⚠️ Tafadhali andika jina lako (angalau herufi 2)';
                 nameError.style.display = 'block';
                 nameInput.style.borderColor = '#ff4b4b';
                 nameInput.focus();
                 return;
             }
+
+            // Check if name already exists
+            if (isNameTaken(userName)) {
+                nameError.textContent = '⚠️ Jina hili limetumika tayari. Chagua jina lingine.';
+                nameError.style.display = 'block';
+                nameInput.style.borderColor = '#ff4b4b';
+                nameInput.focus();
+                return;
+            }
+
             nameError.style.display = 'none';
             nameInput.style.borderColor = '#58cc02';
+
+            // Generate unique ID for this session
+            window.currentUserId = generateUniqueId();
 
             sessionStart = Date.now();
             answers = [];
@@ -797,6 +836,7 @@
             const existingIdx = list.findIndex(p => p.sessionId === sessionId);
 
             const participant = {
+                odUnikalneId: window.currentUserId || generateUniqueId(),
                 id: Date.now(),
                 sessionId: sessionId,
                 name: userName,
@@ -964,9 +1004,9 @@
 
         function exportCSV() {
             // Summary CSV
-            let csv = 'participant_id,name,date,total_questions,correct_answers,accuracy_percent,avg_response_time_sec,session_duration_sec,levels_completed\n';
+            let csv = 'unique_id,participant_id,name,date,total_questions,correct_answers,accuracy_percent,avg_response_time_sec,session_duration_sec,levels_completed\n';
             getParticipants().forEach((p, idx) => {
-                csv += idx + ',"' + p.name + '",' + p.date + ',' + p.total + ',' + p.correct + ',' + p.accuracy + ',' + p.avgTime + ',' + p.duration + ',' + (p.levelsCompleted || 0) + '\n';
+                csv += (p.odUnikalneId || 'N/A') + ',' + idx + ',"' + p.name + '",' + p.date + ',' + p.total + ',' + p.correct + ',' + p.accuracy + ',' + p.avgTime + ',' + p.duration + ',' + (p.levelsCompleted || 0) + '\n';
             });
             const blob = new Blob([csv], { type: 'text/csv' });
             const a = document.createElement('a');
@@ -977,12 +1017,12 @@
 
         function exportDetailedCSV() {
             // Detailed CSV with all answers for scientific analysis
-            let csv = 'participant_id,participant_name,answer_id,timestamp,session_time_ms,module,module_name,level,question_index,question_total,question_text,selected_answer,correct_answer,is_correct,response_time_ms,response_time_sec\n';
+            let csv = 'unique_id,participant_id,participant_name,answer_id,timestamp,session_time_ms,module,module_name,level,question_index,question_total,question_text,selected_answer,correct_answer,is_correct,response_time_ms,response_time_sec\n';
 
             getParticipants().forEach((p, pIdx) => {
                 if (p.answers && p.answers.length > 0) {
                     p.answers.forEach(a => {
-                        csv += pIdx + ',"' + p.name + '",' +
+                        csv += (p.odUnikalneId || 'N/A') + ',' + pIdx + ',"' + p.name + '",' +
                             (a.answerId || '') + ',' +
                             (a.timestamp || '') + ',' +
                             (a.sessionTimeMs || '') + ',' +
