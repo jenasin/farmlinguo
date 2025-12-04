@@ -526,7 +526,48 @@
             document.getElementById('levelPercent').textContent = percent + '%';
             document.getElementById('levelScore').textContent = levelCorrect + '/' + levelTotal + ' sahihi';
 
+            // Auto-save progress after each level
+            saveProgress();
+
             showScreen('levelCompleteScreen');
+        }
+
+        function saveProgress() {
+            if (answers.length === 0) return;
+
+            const duration = Math.floor((Date.now() - sessionStart) / 1000);
+            const accuracy = answers.length > 0 ? Math.round(totalCorrect / answers.length * 100) : 0;
+            const avgTime = answers.length > 0 ? Math.round(answers.reduce((a, b) => a + b.timeMs, 0) / answers.length / 1000 * 10) / 10 : 0;
+
+            // Check if this session already exists (update instead of create new)
+            const list = getParticipants();
+            const sessionId = 'session_' + sessionStart;
+            const existingIdx = list.findIndex(p => p.sessionId === sessionId);
+
+            const participant = {
+                id: Date.now(),
+                sessionId: sessionId,
+                name: userName,
+                date: new Date().toISOString(),
+                duration: duration,
+                total: answers.length,
+                correct: totalCorrect,
+                accuracy: accuracy,
+                avgTime: avgTime,
+                levelsCompleted: unlockedIndex,
+                answers: answers
+            };
+
+            if (existingIdx >= 0) {
+                // Update existing session
+                list[existingIdx] = participant;
+            } else {
+                // New session
+                list.push(participant);
+            }
+
+            saveParticipants(list);
+            updateParticipantCount();
         }
 
         function continueToNext() {
@@ -549,26 +590,11 @@
         function endTest() {
             clearInterval(timerInterval);
 
-            const duration = Math.floor((Date.now() - sessionStart) / 1000);
+            // Save final progress
+            saveProgress();
+
             const accuracy = answers.length > 0 ? Math.round(totalCorrect / answers.length * 100) : 0;
             const avgTime = answers.length > 0 ? Math.round(answers.reduce((a, b) => a + b.timeMs, 0) / answers.length / 1000 * 10) / 10 : 0;
-
-            // Save participant
-            const participant = {
-                id: Date.now(),
-                name: userName,
-                date: new Date().toISOString(),
-                duration: duration,
-                total: answers.length,
-                correct: totalCorrect,
-                accuracy: accuracy,
-                avgTime: avgTime,
-                answers: answers
-            };
-
-            const list = getParticipants();
-            list.push(participant);
-            saveParticipants(list);
 
             // Show results
             const header = document.getElementById('resultsHeader');
