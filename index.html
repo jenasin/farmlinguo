@@ -374,6 +374,9 @@
                 <button class="btn" style="background:#dbeafe; color:#1d4ed8;" onclick="showParticipants()">
                     👥 Washiriki (<span id="participantCount">0</span>)
                 </button>
+                <button class="btn" style="background:#f3e8ff; color:#7c3aed; margin-top:8px;" onclick="showParticipants(); setTimeout(showDebugLogs, 100);">
+                    🔍 Debug Logy
+                </button>
             </div>
         </div>
     </div>
@@ -1395,7 +1398,38 @@
         }
 
         // ========== INIT ==========
-        updateParticipantCount();
+        function init() {
+            try {
+                debugLog('INIT', 'Running init()');
+
+                // Update participant count
+                updateParticipantCount();
+                debugLog('INIT', 'Participant count updated', { count: getParticipants().length });
+
+                // Ensure start screen is visible
+                showScreen('startScreen');
+
+                // Focus on name input
+                const nameInput = document.getElementById('nameInput');
+                if (nameInput) {
+                    nameInput.value = '';
+                    debugLog('INIT', 'Name input ready');
+                } else {
+                    debugLog('ERROR', 'Name input not found!');
+                }
+
+                debugLog('INIT', 'Init complete');
+            } catch (e) {
+                debugLog('ERROR', 'Init failed: ' + e.message, { stack: e.stack });
+            }
+        }
+
+        // Run init when DOM is ready
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', init);
+        } else {
+            init();
+        }
     </script>
 </body>
 </html>
