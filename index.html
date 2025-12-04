@@ -660,7 +660,7 @@
         };
 
         // App version - change this on each deploy to auto-clear cache
-        const APP_VERSION = 'v25';
+        const APP_VERSION = 'v26';
 
         // Force refresh - clear SW cache and reload
         function forceRefresh() {
@@ -1465,6 +1465,19 @@
             try {
                 debugLog('INIT', 'Running init()');
 
+                // Register service worker
+                if ('serviceWorker' in navigator) {
+                    navigator.serviceWorker.register('./sw.js')
+                        .then(function(reg) {
+                            debugLog('INIT', 'SW registered', { scope: reg.scope });
+                            // Check for updates
+                            reg.update();
+                        })
+                        .catch(function(err) {
+                            debugLog('ERROR', 'SW registration failed', { error: err.message });
+                        });
+                }
+
                 // Update participant count
                 updateParticipantCount();
                 debugLog('INIT', 'Participant count updated', { count: getParticipants().length });
@@ -1476,6 +1489,10 @@
                 const nameInput = document.getElementById('nameInput');
                 if (nameInput) {
                     nameInput.value = '';
+                    // Add touch handler for mobile keyboard
+                    nameInput.addEventListener('touchstart', function() {
+                        this.focus();
+                    });
                     debugLog('INIT', 'Name input ready');
                 } else {
                     debugLog('ERROR', 'Name input not found!');
