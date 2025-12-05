@@ -14,6 +14,7 @@
             user-select: text !important;
             pointer-events: auto !important;
             -webkit-appearance: none;
+            appearance: none;
         }
         body { background: linear-gradient(to bottom, #f0fdf4, #dcfce7); min-height: 100vh; }
         .screen { display: none; min-height: 100vh; }
@@ -664,7 +665,7 @@
         };
 
         // App version - change this on each deploy to auto-clear cache
-        const APP_VERSION = 'v32';
+        const APP_VERSION = 'v33';
 
         // Force refresh - clear SW cache and reload
         function forceRefresh() {
@@ -1376,6 +1377,16 @@
             if (timerInterval) {
                 clearInterval(timerInterval);
                 timerInterval = null;
+            }
+
+            // Save current progress before resetting (if any answers exist)
+            if (answers.length > 0 && userName) {
+                saveProgress();
+                debugLog('ACTION', 'Progress saved before new test', {
+                    user: userName,
+                    answers: answers.length,
+                    correct: totalCorrect
+                });
             }
 
             // Reset all state variables
