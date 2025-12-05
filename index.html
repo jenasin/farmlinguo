@@ -208,6 +208,24 @@
             box-shadow: 0 0 0 3px rgba(88,204,2,0.3);
         }
         .timer { font-size: 32px; font-weight: bold; font-family: 'Courier New', monospace; }
+        .time-btn {
+            flex: 1;
+            padding: 12px 8px;
+            border: 2px solid #e5e7eb;
+            border-radius: 12px;
+            background: white;
+            font-size: 16px;
+            font-weight: 700;
+            color: #666;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .time-btn:hover { border-color: #58cc02; color: #58cc02; }
+        .time-btn.selected {
+            background: #58cc02;
+            border-color: #58cc02;
+            color: white;
+        }
         .progress { height: 10px; background: #e5e7eb; border-radius: 5px; overflow: hidden; }
         .progress-bar { height: 100%; background: linear-gradient(90deg, #58cc02, #78e007); transition: width 0.3s; border-radius: 5px; }
         .icon { font-size: 48px; }
@@ -398,9 +416,18 @@
                     ⚠️ Tafadhali andika jina lako (angalau herufi 2)
                 </div>
             </div>
+            <div class="card" style="margin:16px;">
+                <div style="font-weight:bold; margin-bottom:12px;">⏱️ Muda wa mtihani:</div>
+                <div style="display:flex; gap:8px;">
+                    <button class="time-btn" onclick="setTestTime(3)" data-time="3">3 dk</button>
+                    <button class="time-btn selected" onclick="setTestTime(5)" data-time="5">5 dk</button>
+                    <button class="time-btn" onclick="setTestTime(10)" data-time="10">10 dk</button>
+                    <button class="time-btn" onclick="setTestTime(15)" data-time="15">15 dk</button>
+                </div>
+            </div>
             <div style="padding:0 16px;">
                 <button class="btn btn-green" onclick="startTest()">🚀 ANZA MTIHANI</button>
-                <p style="text-align:center; color:#888; margin-top:12px;">⏱️ Dakika 5 • 📚 Viwango 15</p>
+                <p style="text-align:center; color:#888; margin-top:12px;">📚 Viwango 15</p>
             </div>
             <div style="padding:16px;">
                 <button class="btn" style="background:#dbeafe; color:#1d4ed8;" onclick="showParticipants()">
@@ -681,7 +708,7 @@
         };
 
         // App version - change this on each deploy to auto-clear cache
-        const APP_VERSION = 'v34';
+        const APP_VERSION = 'v35';
 
         // Force refresh - clear SW cache and reload
         function forceRefresh() {
@@ -829,8 +856,22 @@
         let totalCorrect = 0;
         let levelCorrect = 0; // Correct answers in current level
         let levelTotal = 0;   // Total questions in current level
-        const SESSION_DURATION = 5 * 60;
+        let SESSION_DURATION = 5 * 60; // Default 5 minutes
         const PASS_THRESHOLD = 80; // 80% required to unlock next level
+
+        // Set test duration from home screen
+        function setTestTime(minutes) {
+            SESSION_DURATION = minutes * 60;
+            // Update button states
+            document.querySelectorAll('.time-btn').forEach(btn => {
+                btn.classList.remove('selected');
+                if (parseInt(btn.dataset.time) === minutes) {
+                    btn.classList.add('selected');
+                }
+            });
+            // Update timer display
+            document.getElementById('timerDisplay').textContent = minutes + ':00';
+        }
 
         // Progress tracking - which levels are unlocked
         let unlockedIndex = 0; // Index into LEVELS array
