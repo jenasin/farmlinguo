@@ -6,6 +6,11 @@
     <title>FarmLinguo - Jifunze Kilimo</title>
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#16a34a">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="icon" type="image/svg+xml" href="icon.svg">
+    <link rel="apple-touch-icon" href="icon.svg">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Nunito', 'Segoe UI', Tahoma, sans-serif; }
         input, textarea {
@@ -708,7 +713,7 @@
         };
 
         // App version - change this on each deploy to auto-clear cache
-        const APP_VERSION = 'v35';
+        const APP_VERSION = 'v36';
 
         // Force refresh - clear SW cache and reload
         function forceRefresh() {
